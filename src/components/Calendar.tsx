@@ -6,18 +6,23 @@ import {
   BellOutlined,
   LeftOutlined,
   RightOutlined,
-  CalendarFilled,
   MoonFilled,
   SunFilled,
 } from "@ant-design/icons";
-import { Select } from "antd";
+import { DatePicker } from "antd";
 import type { CalendarEvent, EventBar } from "../types";
 import { sampleEvents } from "../types/sample";
 import EventDetailModal from "./EventDetailModal";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
+import Calendar from "../assets/calendar.png";
+import { accentColors, withAlpha } from "../lib/helpers";
+import MobileCalendar from "./MobileCalendar";
 
 dayjs.extend(isoWeek);
 
 const CalendarApp: React.FC = () => {
+  const [loading, setLoading] = useState(true);
+
   const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs("2026-02-01"));
 
   const [now, setNow] = useState(dayjs());
@@ -26,6 +31,8 @@ const CalendarApp: React.FC = () => {
     null,
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const [direction, setDirection] = useState<"prev" | "next" | null>(null);
 
   const openEventModal = (event: CalendarEvent) => {
     setSelectedEvent(event);
@@ -39,13 +46,28 @@ const CalendarApp: React.FC = () => {
 
   const isPM = now.hour() >= 12;
 
-  const months = dayjs.months();
-  const years = Array.from({ length: 21 }, (_, i) => dayjs().year() - 10 + i);
-
   useEffect(() => {
     const interval = setInterval(() => setNow(dayjs()), 1000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 1800);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    document.body.style.overflow = loading ? "hidden" : "auto";
+  }, [loading]);
+
+  useEffect(() => {
+    if (!direction) return;
+    const t = setTimeout(() => setDirection(null), 300);
+    return () => clearTimeout(t);
+  }, [direction]);
 
   const calendarGrid = useMemo(() => {
     const start = selectedDate.startOf("month").startOf("isoWeek");
@@ -115,182 +137,281 @@ const CalendarApp: React.FC = () => {
     return bars;
   }, [calendarGrid]);
 
-  const goToPreviousMonth = () =>
-    setSelectedDate(selectedDate.subtract(1, "month"));
-  const goToNextMonth = () => setSelectedDate(selectedDate.add(1, "month"));
-  const goToToday = () => setSelectedDate(dayjs());
-
-  const colorClasses = {
-    purple: "bg-purple-100 text-purple-700 border-purple-200",
-    yellow: "bg-yellow-50 text-yellow-700 border-yellow-200",
-    cyan: "bg-cyan-100 text-cyan-700 border-cyan-200",
-    gray: "bg-gray-100 text-gray-500 border-gray-200",
+  const goToPreviousMonth = () => {
+    setDirection("prev");
+    setSelectedDate((d) => d.subtract(1, "month"));
   };
+
+  const goToNextMonth = () => {
+    setDirection("next");
+    setSelectedDate((d) => d.add(1, "month"));
+  };
+
+  const goToToday = () => setSelectedDate(dayjs());
 
   const today = dayjs();
 
+  const getWeekHeight = (weekIndex: number) => {
+    const weekBars = eventBars.filter((b) => b.weekIndex === weekIndex);
+    const maxRow = weekBars.length
+      ? Math.max(...weekBars.map((b) => b.row))
+      : -1;
+
+    return 72 + (maxRow + 1) * 48;
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-7xl mx-auto bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="p-4 border-b flex justify-between items-center">
-          <div className="flex items-center gap-2 text-lg font-semibold">
-            <CalendarFilled /> Calendar
-          </div>
-          <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
-            {/* hidden sm:inline */}
-            <span
-              className={`inline font-medium ${
-                isPM ? "text-indigo-600" : "text-amber-500"
-              }`}
-            >
-              {now.format("hh:mm A")}
-            </span>
-
-            <div
-              className={`flex items-center gap-1 px-2 py-1 rounded-full ${
-                isPM
-                  ? "bg-indigo-50 text-indigo-600"
-                  : "bg-amber-50 text-amber-500"
-              }`}
-            >
-              {isPM ? (
-                <span className="text-lg">
-                  <MoonFilled />
-                </span>
-              ) : (
-                <span className="text-lg">
-                  <SunFilled />
-                </span>
-              )}
-            </div>
-            <button className="px-3 py-1 text-sm border hover:bg-gray-100 rounded">
-              <SearchOutlined />
-            </button>
-            <button className="px-3 py-1 text-sm border hover:bg-gray-100 rounded">
-              <BellOutlined />
-            </button>
-          </div>
+    <div className="relative min-h-screen">
+      {/* Loading */}
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#EAF7FD] transition-opacity duration-500">
+          <DotLottieReact
+            src="/Flight.lottie"
+            autoplay
+            loop
+            // className="translate-y-1"
+            style={{ width: 220, height: 220 }}
+          />
         </div>
-
-        <div className="p-4 border-b flex justify-between items-center">
-          <div className="flex gap-2">
-            <Select
-              value={selectedDate.month()}
-              onChange={(m) => setSelectedDate(selectedDate.month(m))}
-              options={months.map((m, i) => ({ label: m, value: i }))}
-            />
-            <Select
-              value={selectedDate.year()}
-              onChange={(y) => setSelectedDate(selectedDate.year(y))}
-              options={years.map((y) => ({ label: y, value: y }))}
-            />
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={goToToday}
-              className="px-3 py-1 text-sm border hover:bg-gray-100 rounded"
-            >
-              Today
-            </button>
-            <button onClick={goToPreviousMonth}>
-              <LeftOutlined />
-            </button>
-            <button onClick={goToNextMonth}>
-              <RightOutlined />
-            </button>
-          </div>
-        </div>
-
-        <div className="p-4 overflow-x-auto">
-          <div className="min-w-[640px]">
-            <div className="grid grid-cols-7 mb-2 text-center text-sm text-gray-500">
-              {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
-                <div key={d}>{d}</div>
-              ))}
-            </div>
-
-            {calendarGrid.map((week, weekIndex) => (
-              <div key={weekIndex} className="relative mb-2">
-                <div className="grid grid-cols-7 gap-2">
-                  {/* {week.map((date, i) => (
-                    <div
-                      key={i}
-                      className="min-h-[100px] border rounded p-2 text-right text-sm"
-                    >
-                      {date.date()}
-                    </div>
-                  ))} */}
-                  {week.map((date, i) => {
-                    const isToday = date.isSame(today, "day");
-                    const isCurrentMonth =
-                      date.month() === selectedDate.month();
-
-                    return (
-                      <div
-                        key={i}
-                        className={`
-                          min-h-[100px] border rounded p-2 text-right text-sm relative transition-all
-                          ${isCurrentMonth ? "bg-white" : "bg-gray-50 text-gray-400"}
-                          ${isToday ? "ring-2 ring-blue-500 bg-blue-50" : ""}
-                        `}
-                      >
-                        <div
-                          className={`font-medium ${
-                            isToday ? "text-blue-600" : ""
-                          }`}
-                        >
-                          {date.date()}
-                        </div>
-
-                        {isToday && (
-                          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-blue-500 rounded-full" />
-                        )}
-                      </div>
-                    );
-                  })}
+      )}
+      <div
+        className={`transition-opacity duration-500 ${
+          loading ? "opacity-0" : "opacity-100"
+        }`}
+      >
+        {/* className="hidden md:block" */}
+        <div>
+          <div className="min-h-screen p-4 bg-[#EAF7FD]">
+            <div className="max-w-8xl mx-auto bg-white rounded-lg shadow-sm overflow-hidden border border-[#9ADFFC]">
+              <div className="p-4 border-b border-[#9ADFFC] flex justify-between items-center">
+                <div className="flex items-center gap-2 text-lg font-semibold">
+                  <img
+                    src={Calendar}
+                    alt="Calendar"
+                    className="w-8 h-8 object-contain"
+                  />
+                  <span>Calendar</span>
                 </div>
 
-                <div className="absolute inset-0 pointer-events-none">
-                  {eventBars
-                    .filter((b) => b.weekIndex === weekIndex)
-                    .map((bar, i) => (
-                      <div
-                        key={i}
-                        className={`
-                          absolute pointer-events-auto
-                          ${colorClasses[bar.event.color]}
-                          cursor-pointer border rounded-md
-                          px-2 py-1 text-xs font-medium
-                          overflow-hidden backdrop-blur-[1px]
+                <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
+                  {/* hidden sm:inline */}
+                  <span
+                    className={`inline font-medium ${
+                      isPM ? "text-indigo-600" : "text-amber-500"
+                    }`}
+                  >
+                    {now.format("D MMM,YYYY - hh:mm A")}
+                  </span>
 
-                          transition-all duration-200 ease-out
-                          hover:-translate-y-0.5 hover:shadow-lg hover:brightness-105
-                          active:scale-95
-                        `}
-                        style={{
-                          left: `calc(${(bar.startCol / 7) * 100}% + ${bar.startCol * 4}px)`,
-                          width: `calc(${(bar.span / 7) * 100}% - ${(7 - bar.span) * 4}px)`,
-                          top: `${30 + bar.row * 28}px`,
-                          height: "24px",
-                        }}
-                        onClick={() => openEventModal(bar.event)}
-                      >
-                        {bar.event.title}
-                      </div>
-                    ))}
+                  <div
+                    className={`flex items-center gap-1 px-2 py-1 rounded-full ${
+                      isPM
+                        ? "bg-indigo-50 text-indigo-600"
+                        : "bg-amber-50 text-amber-500"
+                    }`}
+                  >
+                    {isPM ? (
+                      <span className="text-lg">
+                        <MoonFilled />
+                      </span>
+                    ) : (
+                      <span className="text-lg">
+                        <SunFilled />
+                      </span>
+                    )}
+                  </div>
+                  <button className="px-3 py-1 text-sm border hover:bg-gray-100 rounded">
+                    <SearchOutlined />
+                  </button>
+                  <button className="px-3 py-1 text-sm border hover:bg-gray-100 rounded">
+                    <BellOutlined />
+                  </button>
                 </div>
               </div>
-            ))}
+
+              <div className="p-4 border-b flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <DatePicker
+                    picker="month"
+                    value={selectedDate}
+                    onChange={(date) => {
+                      if (!date) return;
+                      setSelectedDate(date);
+                    }}
+                    allowClear={false}
+                    format="MMMM YYYY"
+                    placeholder="Select month"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={goToToday}
+                    className="px-3 py-1 text-sm border hover:bg-gray-100 rounded"
+                  >
+                    Today
+                  </button>
+                  <button
+                    onClick={goToPreviousMonth}
+                    className="hover:bg-gray-100 transition-all p-1.5 rounded-lg"
+                  >
+                    <LeftOutlined />
+                  </button>
+                  <button
+                    onClick={goToNextMonth}
+                    className=" hover:bg-gray-100 transition-all p-1.5 rounded-lg"
+                  >
+                    <RightOutlined />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-4 overflow-x-auto">
+                <div className="min-w-[640px]">
+                  <div className="grid grid-cols-7 text-center text-sm text-[#064B63] relative z-[1] bg-[#F2FBFF] rounded-md">
+                    {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(
+                      (d) => (
+                        <div key={d}>{d}</div>
+                      ),
+                    )}
+                  </div>
+
+                  <div
+                    key={selectedDate.format("YYYY-MM")}
+                    className={`
+                      transition-all duration-300 ease-out
+                      ${direction === "next" ? "animate-slide-left" : ""}
+                      ${direction === "prev" ? "animate-slide-right" : ""}
+                    `}
+                  >
+                    {calendarGrid.map((week, weekIndex) => (
+                      <div
+                        key={weekIndex}
+                        className="relative mb-4 overflow-visible"
+                        style={{ height: getWeekHeight(weekIndex) }}
+                      >
+                        <div className="grid grid-cols-7 text-center text-sm text-gray-500 relative z-[1]">
+                          {/* {week.map((date, i) => (
+                            <div
+                              key={i}
+                              className="min-h-[100px] border rounded p-2 text-right text-sm"
+                            >
+                              {date.date()}
+                            </div>
+                          ))} */}
+                          {week.map((date, i) => {
+                            const isToday = date.isSame(today, "day");
+                            const isCurrentMonth =
+                              date.month() === selectedDate.month();
+
+                            return (
+                              <div
+                                key={i}
+                                className={`
+                                  h-[72px] px-2 pt-1 text-right text-sm
+                                  ${isCurrentMonth ? "text-gray-700" : "text-gray-400"}
+                                  ${isToday ? "text-blue-800 font-semibold" : ""}
+                                `}
+                              >
+                                {date.date()}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <div className="absolute inset-0 z-[2]">
+                          <div
+                            className="absolute inset-0 z-[1] pointer-events-none"
+                            style={{
+                              backgroundImage:
+                                "radial-gradient(circle, rgba(46,193,251,0.35) 1px, transparent 1px)",
+                              backgroundSize: "16px 16px",
+                            }}
+                          />
+
+                          {eventBars
+                            .filter((b) => b.weekIndex === weekIndex)
+                            .map((bar, i) => (
+                              <div
+                                key={i}
+                                className="
+                                  absolute z-[3]
+                                  rounded-xl
+                                  shadow-sm
+                                  cursor-pointer
+                                  transition-all duration-200 ease-out
+                                  hover:shadow-md hover:-translate-y-0.5
+                                  active:scale-[0.98]
+                                  flex
+                                  items-center
+                                  overflow-hidden
+                                "
+                                style={{
+                                  left: `calc(${(bar.startCol / 7) * 100}% + ${bar.startCol * 4}px)`,
+                                  width: `calc(${(bar.span / 7) * 100}% - ${(7 - bar.span) * 4}px)`,
+                                  top: `${48 + bar.row * 44}px`,
+                                  minHeight: "36px",
+                                  backgroundColor: withAlpha(
+                                    accentColors[bar.event.color],
+                                    0.12,
+                                  ),
+                                }}
+                                onClick={() => openEventModal(bar.event)}
+                              >
+                                <div
+                                  className="h-full w-[6px]"
+                                  style={{
+                                    backgroundColor:
+                                      accentColors[bar.event.color],
+                                  }}
+                                />
+                                <div className="px-2 py-1 overflow-hidden">
+                                  <div
+                                    className="
+                                      text-sm font-semibold text-gray-800
+                                      leading-snug
+                                      break-words
+                                      line-clamp-2
+                                    "
+                                  >
+                                    {bar.event.title}
+                                  </div>
+
+                                  {bar.event.startTime && bar.event.endTime && (
+                                    <div className="text-xs text-gray-500 line-clamp-1">
+                                      {bar.event.startTime} -{" "}
+                                      {bar.event.endTime}
+                                    </div>
+                                  )}
+
+                                  {bar.event.startDate && bar.event.endDate && (
+                                    <div className="text-xs text-gray-500 line-clamp-1">
+                                      {bar.event.startDate} -{" "}
+                                      {bar.event.endDate}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <EventDetailModal
+              event={selectedEvent}
+              open={isModalOpen}
+              onClose={closeEventModal}
+            />
           </div>
         </div>
-      </div>
 
-      <EventDetailModal
-        event={selectedEvent}
-        open={isModalOpen}
-        onClose={closeEventModal}
-      />
+        {/* <div className="block md:hidden">
+          <MobileCalendar />
+        </div> */}
+      </div>
     </div>
   );
 };

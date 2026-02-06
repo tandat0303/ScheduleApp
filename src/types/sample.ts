@@ -12,12 +12,12 @@ export const sampleEvents: CalendarEvent[] = [
   },
   {
     id: "2",
-    title: "Meeting",
+    title: "A Min",
     startTime: "10:00",
     endTime: "11:00",
     startDate: "2026-02-03",
     endDate: "2026-02-03",
-    color: "purple",
+    color: "orange",
   },
   {
     id: "3",
@@ -26,7 +26,7 @@ export const sampleEvents: CalendarEvent[] = [
     endTime: "15:00",
     startDate: "2026-02-08",
     endDate: "2026-02-08",
-    color: "yellow",
+    color: "green",
   },
   {
     id: "4",
@@ -35,7 +35,7 @@ export const sampleEvents: CalendarEvent[] = [
     endTime: "11:00",
     startDate: "2026-02-11",
     endDate: "2026-02-11",
-    color: "yellow",
+    color: "green",
   },
   {
     id: "5",
@@ -53,7 +53,7 @@ export const sampleEvents: CalendarEvent[] = [
     endTime: "12:00",
     startDate: "2026-02-22",
     endDate: "2026-02-22",
-    color: "gray",
+    color: "red",
   },
   {
     id: "7",
@@ -62,7 +62,7 @@ export const sampleEvents: CalendarEvent[] = [
     endTime: "11:00",
     startDate: "2026-02-26",
     endDate: "2026-02-26",
-    color: "purple",
+    color: "orange",
   },
   {
     id: "8",
@@ -71,7 +71,7 @@ export const sampleEvents: CalendarEvent[] = [
     endTime: "17:00",
     startDate: "2026-02-17",
     endDate: "2026-02-19",
-    color: "purple",
+    color: "orange",
   },
   {
     id: "9",
@@ -80,7 +80,7 @@ export const sampleEvents: CalendarEvent[] = [
     endTime: "18:00",
     startDate: "2026-02-27",
     endDate: "2026-02-30",
-    color: "yellow",
+    color: "green",
   },
   {
     id: "10",

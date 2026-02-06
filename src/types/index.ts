@@ -1,3 +1,4 @@
+import { Dayjs } from "dayjs";
 export interface CalendarEvent {
   id: string;
   title: string;
@@ -5,7 +6,7 @@ export interface CalendarEvent {
   endTime: string;
   startDate: string;
   endDate: string;
-  color: "purple" | "cyan" | "yellow" | "gray";
+  color: "orange" | "cyan" | "green" | "red";
 }
 
 export interface EventBar {
@@ -20,4 +21,10 @@ export interface EventDetailProps {
   event: CalendarEvent | null;
   open: boolean;
   onClose: () => void;
+}
+
+export interface EventRange {
+  start: Dayjs;
+  end: Dayjs;
+  events: CalendarEvent[];
 }
