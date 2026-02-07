@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import dayjs, { Dayjs } from "dayjs";
 import isoWeek from "dayjs/plugin/isoWeek";
 import {
@@ -20,52 +20,56 @@ import MobileCalendar from "./MobileCalendar";
 
 dayjs.extend(isoWeek);
 
+// Constants
+const ANIMATION_DURATION = 300;
+const LOADING_DURATION = 1800;
+const TIME_UPDATE_INTERVAL = 60000; // Update every minute instead of every second
+const GRID_BACKGROUND_SIZE = "16px 16px";
+const EVENT_ROW_HEIGHT = 48;
+const EVENT_BASE_HEIGHT = 72;
+
 const CalendarApp: React.FC = () => {
   const [loading, setLoading] = useState(true);
-
   const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs("2026-02-01"));
-
   const [now, setNow] = useState(dayjs());
-
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
     null,
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
-
   const [direction, setDirection] = useState<"prev" | "next" | null>(null);
 
-  const openEventModal = (event: CalendarEvent) => {
+  const openEventModal = useCallback((event: CalendarEvent) => {
     setSelectedEvent(event);
     setIsModalOpen(true);
-  };
+  }, []);
 
-  const closeEventModal = () => {
+  const closeEventModal = useCallback(() => {
     setIsModalOpen(false);
     setSelectedEvent(null);
-  };
+  }, []);
 
   const isPM = now.hour() >= 12;
 
   useEffect(() => {
-    const interval = setInterval(() => setNow(dayjs()), 1000);
+    const interval = setInterval(() => setNow(dayjs()), TIME_UPDATE_INTERVAL);
     return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1800);
-
+    const timer = setTimeout(() => setLoading(false), LOADING_DURATION);
     return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
     document.body.style.overflow = loading ? "hidden" : "auto";
+    return () => {
+      document.body.style.overflow = "auto";
+    };
   }, [loading]);
 
   useEffect(() => {
     if (!direction) return;
-    const t = setTimeout(() => setDirection(null), 300);
+    const t = setTimeout(() => setDirection(null), ANIMATION_DURATION);
     return () => clearTimeout(t);
   }, [direction]);
 
@@ -74,15 +78,14 @@ const CalendarApp: React.FC = () => {
     const end = selectedDate.endOf("month").endOf("isoWeek");
     const weeks: Dayjs[][] = [];
     let current = start;
-    let week: Dayjs[] = [];
 
     while (current.isBefore(end) || current.isSame(end, "day")) {
-      week.push(current);
-      if (week.length === 7) {
-        weeks.push(week);
-        week = [];
+      const week: Dayjs[] = [];
+      for (let i = 0; i < 7; i++) {
+        week.push(current);
+        current = current.add(1, "day");
       }
-      current = current.add(1, "day");
+      weeks.push(week);
     }
     return weeks;
   }, [selectedDate]);
@@ -137,28 +140,29 @@ const CalendarApp: React.FC = () => {
     return bars;
   }, [calendarGrid]);
 
-  const goToPreviousMonth = () => {
+  const goToPreviousMonth = useCallback(() => {
     setDirection("prev");
     setSelectedDate((d) => d.subtract(1, "month"));
-  };
+  }, []);
 
-  const goToNextMonth = () => {
+  const goToNextMonth = useCallback(() => {
     setDirection("next");
     setSelectedDate((d) => d.add(1, "month"));
-  };
+  }, []);
 
-  const goToToday = () => setSelectedDate(dayjs());
+  const goToToday = useCallback(() => {
+    setSelectedDate(dayjs());
+  }, []);
 
-  const today = dayjs();
-
-  const getWeekHeight = (weekIndex: number) => {
-    const weekBars = eventBars.filter((b) => b.weekIndex === weekIndex);
-    const maxRow = weekBars.length
-      ? Math.max(...weekBars.map((b) => b.row))
-      : -1;
-
-    return 72 + (maxRow + 1) * 48;
-  };
+  const getWeekHeight = useCallback(
+    (weekIndex: number) => {
+      const eventsInWeek = eventBars.filter((b) => b.weekIndex === weekIndex);
+      if (eventsInWeek.length === 0) return `${EVENT_BASE_HEIGHT}px`;
+      const maxRows = Math.max(...eventsInWeek.map((b) => b.row + 1));
+      return `${EVENT_BASE_HEIGHT + maxRows * EVENT_ROW_HEIGHT}px`;
+    },
+    [eventBars],
+  );
 
   return (
     <div className="relative min-h-screen">
@@ -180,7 +184,7 @@ const CalendarApp: React.FC = () => {
         }`}
       >
         {/* className="hidden md:block" */}
-        <div>
+        <div className="hidden md:block">
           <div className="min-h-screen p-4 bg-[#EAF7FD]">
             <div className="max-w-8xl mx-auto bg-white rounded-lg shadow-sm overflow-hidden border border-[#9ADFFC]">
               <div className="p-4 border-b border-[#9ADFFC] flex justify-between items-center">
@@ -269,19 +273,17 @@ const CalendarApp: React.FC = () => {
                 <div className="min-w-[640px]">
                   <div className="grid grid-cols-7 text-center text-sm text-[#064B63] relative z-[1] bg-[#F2FBFF] rounded-md">
                     {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(
-                      (d) => (
-                        <div key={d}>{d}</div>
+                      (day) => (
+                        <div key={day}>{day}</div>
                       ),
                     )}
                   </div>
 
                   <div
                     key={selectedDate.format("YYYY-MM")}
-                    className={`
-                      transition-all duration-300 ease-out
-                      ${direction === "next" ? "animate-slide-left" : ""}
-                      ${direction === "prev" ? "animate-slide-right" : ""}
-                    `}
+                    className={`transition-all duration-300 ease-out ${
+                      direction === "next" ? "animate-slide-left" : ""
+                    } ${direction === "prev" ? "animate-slide-right" : ""}`}
                   >
                     {calendarGrid.map((week, weekIndex) => (
                       <div
@@ -290,27 +292,19 @@ const CalendarApp: React.FC = () => {
                         style={{ height: getWeekHeight(weekIndex) }}
                       >
                         <div className="grid grid-cols-7 text-center text-sm text-gray-500 relative z-[1]">
-                          {/* {week.map((date, i) => (
-                            <div
-                              key={i}
-                              className="min-h-[100px] border rounded p-2 text-right text-sm"
-                            >
-                              {date.date()}
-                            </div>
-                          ))} */}
                           {week.map((date, i) => {
-                            const isToday = date.isSame(today, "day");
+                            const isToday = date.isSame(now, "day");
                             const isCurrentMonth =
                               date.month() === selectedDate.month();
 
                             return (
                               <div
                                 key={i}
-                                className={`
-                                  h-[72px] px-2 pt-1 text-right text-sm
-                                  ${isCurrentMonth ? "text-gray-700" : "text-gray-400"}
-                                  ${isToday ? "text-blue-800 font-semibold" : ""}
-                                `}
+                                className={`h-[72px] px-2 pt-1 text-right text-sm ${
+                                  isCurrentMonth
+                                    ? "text-gray-700"
+                                    : "text-gray-400"
+                                } ${isToday ? "text-blue-800 font-semibold" : ""}`}
                               >
                                 {date.date()}
                               </div>
@@ -324,27 +318,16 @@ const CalendarApp: React.FC = () => {
                             style={{
                               backgroundImage:
                                 "radial-gradient(circle, rgba(46,193,251,0.35) 1px, transparent 1px)",
-                              backgroundSize: "16px 16px",
+                              backgroundSize: GRID_BACKGROUND_SIZE,
                             }}
                           />
 
                           {eventBars
                             .filter((b) => b.weekIndex === weekIndex)
-                            .map((bar, i) => (
+                            .map((bar) => (
                               <div
-                                key={i}
-                                className="
-                                  absolute z-[3]
-                                  rounded-xl
-                                  shadow-sm
-                                  cursor-pointer
-                                  transition-all duration-200 ease-out
-                                  hover:shadow-md hover:-translate-y-0.5
-                                  active:scale-[0.98]
-                                  flex
-                                  items-center
-                                  overflow-hidden
-                                "
+                                key={`${bar.event.id}-${bar.weekIndex}-${bar.row}`}
+                                className="absolute z-[3] rounded-xl shadow-sm cursor-pointer transition-all duration-200 ease-out hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] flex items-center overflow-hidden"
                                 style={{
                                   left: `calc(${(bar.startCol / 7) * 100}% + ${bar.startCol * 4}px)`,
                                   width: `calc(${(bar.span / 7) * 100}% - ${(7 - bar.span) * 4}px)`,
@@ -365,14 +348,7 @@ const CalendarApp: React.FC = () => {
                                   }}
                                 />
                                 <div className="px-2 py-1 overflow-hidden">
-                                  <div
-                                    className="
-                                      text-sm font-semibold text-gray-800
-                                      leading-snug
-                                      break-words
-                                      line-clamp-2
-                                    "
-                                  >
+                                  <div className="text-sm font-semibold text-gray-800 leading-snug break-words line-clamp-2">
                                     {bar.event.title}
                                   </div>
 
@@ -408,9 +384,9 @@ const CalendarApp: React.FC = () => {
           </div>
         </div>
 
-        {/* <div className="block md:hidden">
+        <div className="block md:hidden">
           <MobileCalendar />
-        </div> */}
+        </div>
       </div>
     </div>
   );
