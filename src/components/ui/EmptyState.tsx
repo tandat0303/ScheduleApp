@@ -17,6 +17,6 @@ export const EmptyState = () => (
     <div className="text-lg font-semibold text-gray-500">
       No events for this day
     </div>
-    <div className="text-sm text-gray-400 mt-1">Enjoy your free time ✨</div>
+    <div className="text-sm text-gray-400 mt-1">Enjoy your free time</div>
   </motion.div>
 );

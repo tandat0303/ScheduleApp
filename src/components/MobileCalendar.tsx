@@ -90,7 +90,7 @@ const MobileCalendar: React.FC = () => {
       {/* Header */}
       <div className="mb-6 relative">
         <div className="flex items-center justify-between mb-4">
-          <div>
+          <div className="flex gap-2">
             <img
               src={Calendar}
               alt="Calendar"
