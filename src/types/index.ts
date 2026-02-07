@@ -2,6 +2,7 @@ import { Dayjs } from "dayjs";
 export interface CalendarEvent {
   id: string;
   title: string;
+  description: string;
   startTime: string;
   endTime: string;
   startDate: string;
@@ -28,3 +29,12 @@ export interface EventRange {
   end: Dayjs;
   events: CalendarEvent[];
 }
+
+export interface AddEventModalProps {
+  open: boolean;
+  onClose: () => void;
+  selectedDate?: Dayjs;
+  onSave?: (event: CalendarEvent) => void;
+}
+
+export type EventType = "Event" | "Meet" | "Tasks";

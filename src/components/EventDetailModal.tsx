@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import { Modal, Grid } from "antd";
 import dayjs from "dayjs";

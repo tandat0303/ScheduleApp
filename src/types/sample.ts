@@ -4,6 +4,7 @@ export const sampleEvents: CalendarEvent[] = [
   {
     id: "1",
     title: "Visit course",
+    description: "",
     startTime: "10:00",
     endTime: "11:00",
     startDate: "2026-02-05",
@@ -13,6 +14,7 @@ export const sampleEvents: CalendarEvent[] = [
   {
     id: "2",
     title: "A Min",
+    description: "",
     startTime: "10:00",
     endTime: "11:00",
     startDate: "2026-02-03",
@@ -22,6 +24,7 @@ export const sampleEvents: CalendarEvent[] = [
   {
     id: "3",
     title: "Design new pages",
+    description: "",
     startTime: "14:00",
     endTime: "15:00",
     startDate: "2026-02-08",
@@ -31,6 +34,7 @@ export const sampleEvents: CalendarEvent[] = [
   {
     id: "4",
     title: "Design new pages",
+    description: "",
     startTime: "09:00",
     endTime: "11:00",
     startDate: "2026-02-11",
@@ -40,6 +44,7 @@ export const sampleEvents: CalendarEvent[] = [
   {
     id: "5",
     title: "Visit course",
+    description: "",
     startTime: "10:00",
     endTime: "11:00",
     startDate: "2026-02-14",
@@ -49,6 +54,7 @@ export const sampleEvents: CalendarEvent[] = [
   {
     id: "6",
     title: "Type to add...",
+    description: "",
     startTime: "10:00",
     endTime: "12:00",
     startDate: "2026-02-22",
@@ -58,6 +64,7 @@ export const sampleEvents: CalendarEvent[] = [
   {
     id: "7",
     title: "Meeting",
+    description: "",
     startTime: "10:00",
     endTime: "11:00",
     startDate: "2026-02-26",
@@ -67,6 +74,7 @@ export const sampleEvents: CalendarEvent[] = [
   {
     id: "8",
     title: "Conference",
+    description: "",
     startTime: "09:00",
     endTime: "17:00",
     startDate: "2026-02-17",
@@ -76,6 +84,7 @@ export const sampleEvents: CalendarEvent[] = [
   {
     id: "9",
     title: "Team Retreat",
+    description: "",
     startTime: "08:00",
     endTime: "18:00",
     startDate: "2026-02-27",
@@ -85,10 +94,24 @@ export const sampleEvents: CalendarEvent[] = [
   {
     id: "10",
     title: "Workshop Series",
+    description: "",
     startTime: "10:00",
     endTime: "16:00",
     startDate: "2026-02-10",
     endDate: "2026-02-13",
     color: "cyan",
   },
+];
+
+export const factoryOptions = [
+  { label: "All", value: "all" },
+  { label: "Factory A", value: "A" },
+  { label: "Factory B", value: "B" },
+];
+
+export const departmentOptions = [
+  { label: "All", value: "all" },
+  { label: "HR", value: "HR" },
+  { label: "IT", value: "IT" },
+  { label: "Production", value: "PROD" },
 ];

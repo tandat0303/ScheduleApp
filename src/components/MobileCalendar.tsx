@@ -8,7 +8,7 @@ import { accentColors, withAlpha } from "../lib/helpers";
 import { DatePicker } from "antd";
 import { MoonFilled, SunFilled } from "@ant-design/icons";
 import { useRef } from "react";
-import { CalendarDays, LocateFixed, Plus } from "lucide-react";
+import { CalendarDays, LocateFixed } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { EventSkeleton } from "./ui/EventSkeleton";
 import { EmptyState } from "./ui/EmptyState";
@@ -83,6 +83,11 @@ const MobileCalendar: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    setSelectedDate(today);
+    requestAnimationFrame(() => scrollToDay(today));
+  }, []);
+
   const dayLabels = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
   return (
@@ -113,7 +118,7 @@ const MobileCalendar: React.FC = () => {
                 isPM ? "text-indigo-600" : "text-amber-500"
               }`}
             >
-              {now.format("hh:mm A")}
+              {now.format("hh:mm:ss A")}
             </span>
             {isPM ? (
               <span className="text-lg">
@@ -203,37 +208,37 @@ const MobileCalendar: React.FC = () => {
       </div>
 
       {/* ACTION BUTTONS */}
-      <div className="flex justify-between mb-4">
-        <div className="flex justify-end gap-2">
-          <AnimatePresence>
-            {!isTodaySelected && (
-              <motion.button
-                key="today-btn"
-                initial={{ opacity: 0, scale: 0.85 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.85 }}
-                transition={{ duration: 0.18, ease: "easeOut" }}
-                onClick={() => {
-                  setSelectedDate(today);
-                  requestAnimationFrame(() => scrollToDay(today));
-                }}
-                className="
+      <div className="flex justify-end gap-2 mb-4">
+        <AnimatePresence>
+          {!isTodaySelected && (
+            <motion.button
+              key="today-btn"
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.85 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              onClick={() => {
+                setSelectedDate(today);
+                requestAnimationFrame(() => scrollToDay(today));
+              }}
+              className="
                   w-10 h-10 rounded-full
                   bg-white shadow-md
                   flex items-center justify-center
                   text-[#2ec1fb]
                   hover:bg-[#EAF7FD]
                 "
-                title="Go to today"
-              >
-                <LocateFixed size={18} />
-              </motion.button>
-            )}
-          </AnimatePresence>
-          {/* Selected day */}
-          <button
-            onClick={() => scrollToDay(selectedDate)}
-            className="
+              title="Go to today"
+            >
+              <LocateFixed size={18} />
+            </motion.button>
+          )}
+        </AnimatePresence>
+
+        {/* Selected day */}
+        <button
+          onClick={() => scrollToDay(selectedDate)}
+          className="
               w-10 h-10 rounded-full
               bg-white shadow-md
               flex items-center justify-center
@@ -241,25 +246,9 @@ const MobileCalendar: React.FC = () => {
               hover:bg-[#EAF7FD]
               transition
             "
-            title="Go to selected day"
-          >
-            <CalendarDays size={18} />
-          </button>
-        </div>
-
-        <button
-          // onClick={() => scrollToDay(selectedDate)}
-          className="
-            w-10 h-10 rounded-full
-            bg-white shadow-md
-            flex items-center justify-center
-            text-[#00b1c5]
-            hover:bg-[#EAF7FD]
-            transition
-          "
-          title="Create Events"
+          title="Go to selected day"
         >
-          <Plus size={18} />
+          <CalendarDays size={18} />
         </button>
       </div>
 

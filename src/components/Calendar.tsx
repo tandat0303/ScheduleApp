@@ -2,28 +2,30 @@ import React, { useState, useMemo, useEffect, useCallback } from "react";
 import dayjs, { Dayjs } from "dayjs";
 import isoWeek from "dayjs/plugin/isoWeek";
 import {
-  SearchOutlined,
-  BellOutlined,
   LeftOutlined,
   RightOutlined,
   MoonFilled,
   SunFilled,
 } from "@ant-design/icons";
-import { DatePicker } from "antd";
+import { DatePicker, Select, Input, Button, Space, Form, Popover } from "antd";
 import type { CalendarEvent, EventBar } from "../types";
-import { sampleEvents } from "../types/sample";
+import {
+  departmentOptions,
+  factoryOptions,
+  sampleEvents,
+} from "../types/sample";
 import EventDetailModal from "./EventDetailModal";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import Calendar from "../assets/calendar.png";
 import { accentColors, withAlpha } from "../lib/helpers";
 import MobileCalendar from "./MobileCalendar";
+import { EventPopover } from "./EventPopover";
 
 dayjs.extend(isoWeek);
 
-// Constants
 const ANIMATION_DURATION = 300;
 const LOADING_DURATION = 1800;
-const TIME_UPDATE_INTERVAL = 60000; // Update every minute instead of every second
+const TIME_UPDATE_INTERVAL = 1000;
 const GRID_BACKGROUND_SIZE = "16px 16px";
 const EVENT_ROW_HEIGHT = 48;
 const EVENT_BASE_HEIGHT = 72;
@@ -38,10 +40,7 @@ const CalendarApp: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [direction, setDirection] = useState<"prev" | "next" | null>(null);
 
-  const openEventModal = useCallback((event: CalendarEvent) => {
-    setSelectedEvent(event);
-    setIsModalOpen(true);
-  }, []);
+  const [form] = Form.useForm();
 
   const closeEventModal = useCallback(() => {
     setIsModalOpen(false);
@@ -164,6 +163,28 @@ const CalendarApp: React.FC = () => {
     [eventBars],
   );
 
+  const handleMultipleChange = (
+    field: "factory" | "department",
+    values: string[],
+  ) => {
+    if (values.includes("all")) {
+      form.setFieldValue(field, ["all"]);
+    } else {
+      form.setFieldValue(field, values);
+    }
+  };
+
+  const handleSearch = (values: any) => {
+    const { factory, department, name, leaveDate } = values;
+
+    console.log({
+      factory,
+      department,
+      name,
+      leaveDate: leaveDate?.format("YYYY-MM-DD"),
+    });
+  };
+
   return (
     <div className="relative min-h-screen">
       {/* Loading */}
@@ -195,16 +216,13 @@ const CalendarApp: React.FC = () => {
                     className="w-8 h-8 object-contain"
                   />
                   <span>Calendar</span>
-                </div>
 
-                <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
-                  {/* hidden sm:inline */}
                   <span
                     className={`inline font-medium ${
                       isPM ? "text-indigo-600" : "text-amber-500"
                     }`}
                   >
-                    {now.format("D MMM,YYYY - hh:mm A")}
+                    {now.format("D MMM,YYYY - hh:mm:ss A")}
                   </span>
 
                   <div
@@ -224,13 +242,62 @@ const CalendarApp: React.FC = () => {
                       </span>
                     )}
                   </div>
-                  <button className="px-3 py-1 text-sm border hover:bg-gray-100 rounded">
-                    <SearchOutlined />
-                  </button>
-                  <button className="px-3 py-1 text-sm border hover:bg-gray-100 rounded">
-                    <BellOutlined />
-                  </button>
                 </div>
+
+                <Form
+                  form={form}
+                  layout="vertical"
+                  onFinish={handleSearch}
+                  initialValues={{
+                    factory: ["all"],
+                    department: ["all"],
+                  }}
+                >
+                  <div className="flex items-end">
+                    <Space size={12} align="end" wrap>
+                      {/* Factory */}
+                      <Form.Item label="廠別" name="factory">
+                        <Select
+                          mode="multiple"
+                          options={factoryOptions}
+                          maxTagCount={1}
+                          style={{ width: 160 }}
+                          onChange={(v) => handleMultipleChange("factory", v)}
+                        />
+                      </Form.Item>
+
+                      {/* Department */}
+                      <Form.Item label="部門" name="department">
+                        <Select
+                          mode="multiple"
+                          options={departmentOptions}
+                          maxTagCount={1}
+                          style={{ width: 180 }}
+                          onChange={(v) =>
+                            handleMultipleChange("department", v)
+                          }
+                        />
+                      </Form.Item>
+
+                      {/* Name */}
+                      <Form.Item label="姓名" name="name">
+                        <Input allowClear style={{ width: 160 }} />
+                      </Form.Item>
+
+                      {/* Leave Date */}
+                      <Form.Item label="休假日期" name="leaveDate">
+                        <DatePicker style={{ width: 200 }} />
+                      </Form.Item>
+
+                      {/* Search button */}
+                      <Form.Item>
+                        <Button type="primary" htmlType="submit">
+                          查詢
+                        </Button>
+                      </Form.Item>
+                    </Space>
+                  </div>
+                </Form>
               </div>
 
               <div className="p-4 border-b flex justify-between items-center">
@@ -325,48 +392,47 @@ const CalendarApp: React.FC = () => {
                           {eventBars
                             .filter((b) => b.weekIndex === weekIndex)
                             .map((bar) => (
-                              <div
-                                key={`${bar.event.id}-${bar.weekIndex}-${bar.row}`}
-                                className="absolute z-[3] rounded-xl shadow-sm cursor-pointer transition-all duration-200 ease-out hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] flex items-center overflow-hidden"
-                                style={{
-                                  left: `calc(${(bar.startCol / 7) * 100}% + ${bar.startCol * 4}px)`,
-                                  width: `calc(${(bar.span / 7) * 100}% - ${(7 - bar.span) * 4}px)`,
-                                  top: `${48 + bar.row * 44}px`,
-                                  minHeight: "36px",
-                                  backgroundColor: withAlpha(
-                                    accentColors[bar.event.color],
-                                    0.12,
-                                  ),
-                                }}
-                                onClick={() => openEventModal(bar.event)}
+                              <Popover
+                                content={<EventPopover event={bar.event} />}
+                                trigger="hover"
+                                mouseEnterDelay={0.2}
+                                placement="top"
                               >
                                 <div
-                                  className="h-full w-[6px]"
+                                  className="absolute z-[3] rounded-xl shadow-sm cursor-default transition-all duration-200 ease-out hover:shadow-md hover:-translate-y-0.5 flex items-center overflow-hidden"
                                   style={{
-                                    backgroundColor:
+                                    left: `calc(${(bar.startCol / 7) * 100}% + ${bar.startCol * 4}px)`,
+                                    width: `calc(${(bar.span / 7) * 100}% - ${(7 - bar.span) * 4}px)`,
+                                    top: `${48 + bar.row * 44}px`,
+                                    minHeight: "36px",
+                                    backgroundColor: withAlpha(
                                       accentColors[bar.event.color],
+                                      0.12,
+                                    ),
                                   }}
-                                />
-                                <div className="px-2 py-1 overflow-hidden">
-                                  <div className="text-sm font-semibold text-gray-800 leading-snug break-words line-clamp-2">
-                                    {bar.event.title}
+                                >
+                                  <div
+                                    className="h-full w-[6px]"
+                                    style={{
+                                      backgroundColor:
+                                        accentColors[bar.event.color],
+                                    }}
+                                  />
+                                  <div className="px-2 py-1 overflow-hidden">
+                                    <div className="text-sm font-semibold text-gray-800 leading-snug line-clamp-2">
+                                      {bar.event.title}
+                                    </div>
+
+                                    {bar.event.startTime &&
+                                      bar.event.endTime && (
+                                        <div className="text-xs text-gray-500 line-clamp-1">
+                                          {bar.event.startTime} -{" "}
+                                          {bar.event.endTime}
+                                        </div>
+                                      )}
                                   </div>
-
-                                  {bar.event.startTime && bar.event.endTime && (
-                                    <div className="text-xs text-gray-500 line-clamp-1">
-                                      {bar.event.startTime} -{" "}
-                                      {bar.event.endTime}
-                                    </div>
-                                  )}
-
-                                  {bar.event.startDate && bar.event.endDate && (
-                                    <div className="text-xs text-gray-500 line-clamp-1">
-                                      {bar.event.startDate} -{" "}
-                                      {bar.event.endDate}
-                                    </div>
-                                  )}
                                 </div>
-                              </div>
+                              </Popover>
                             ))}
                         </div>
                       </div>

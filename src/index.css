@@ -61,3 +61,8 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+.mobile-range-picker {
+  max-height: 85vh;
+  overflow: auto;
+}
