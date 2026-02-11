@@ -2,7 +2,13 @@ import React from "react";
 import { Modal, Grid } from "antd";
 import dayjs from "dayjs";
 import type { EventDetailProps } from "../types";
-import { accentColors } from "../lib/helpers";
+import {
+  formatDate,
+  getDatesBetween,
+  INDEX_LABEL_MAP,
+  mergeContinuousDates,
+} from "../lib/helpers";
+import { CloseOutlined } from "@ant-design/icons";
 
 const EventDetailModal: React.FC<EventDetailProps> = ({
   event,
@@ -12,31 +18,6 @@ const EventDetailModal: React.FC<EventDetailProps> = ({
   const { useBreakpoint } = Grid;
   const screens = useBreakpoint();
   const isMobile = !screens.sm;
-
-  const durationDays =
-    dayjs(event?.endDate).diff(dayjs(event?.startDate), "day") + 1;
-
-  const FieldRow = ({
-    label,
-    value,
-    isLast = false,
-  }: {
-    label: string;
-    value: React.ReactNode;
-    isLast?: boolean;
-  }) => (
-    <div>
-      <div className="flex justify-between items-start py-4 md:py-5">
-        <span className="text-sm md:text-base font-bold text-gray-800 w-24 md:w-28">
-          {label}
-        </span>
-        <span className="text-sm md:text-base text-gray-500 flex-1 text-right px-4">
-          {value}
-        </span>
-      </div>
-      {!isLast && <div className="h-px bg-gray-200" />}
-    </div>
-  );
 
   return (
     <Modal
@@ -50,72 +31,115 @@ const EventDetailModal: React.FC<EventDetailProps> = ({
           padding: isMobile ? "24px 20px" : "32px 28px",
         },
       }}
-      closeIcon={null}
+      closeIcon={
+        <CloseOutlined className="text-gray-500 hover:text-gray-800 text-base" />
+      }
       // modalRenderToBody
     >
-      {event && (
-        <div className="space-y-0">
-          {/* Event Name */}
-          <FieldRow label="EVENT NAME" value={event.title} />
+      {event &&
+        (() => {
+          const data = event.meta;
+          const leaveRows: React.ReactNode[] = [];
+          const occupiedDates = new Set<string>();
+          const OTHER_STAY_INDEX = [1, 3, 4];
 
-          {/* Date */}
-          <FieldRow
-            label="DATE"
-            value={
-              event.startDate === event.endDate
-                ? dayjs(event.startDate).format("ddd, MMM DD")
-                : `${dayjs(event.startDate).format("ddd, MMM DD")} - ${dayjs(event.endDate).format("ddd, MMM DD")}`
+          OTHER_STAY_INDEX.forEach((i) => {
+            const start = data[`StartDate${i}`];
+            const end = data[`EndDate${i}`];
+            if (!start || !end) return;
+
+            getDatesBetween(start, end).forEach((d) => occupiedDates.add(d));
+          });
+
+          // 在地休
+          if (data.IsStayComLoc && data.StayComDates) {
+            const rawDates = data.StayComDates.split(",");
+            const pureDates = rawDates.filter(
+              (d: string) => !occupiedDates.has(d),
+            );
+
+            if (pureDates.length > 0) {
+              const ranges = mergeContinuousDates(pureDates);
+
+              leaveRows.push(
+                <div key="staycomloc">
+                  • <span className="font-medium">在地休</span>：
+                  {ranges.join(", ")}
+                  {data.LocationTo2 && ` (${data.LocationTo2})`}
+                  {data.DateTimeQty2 && `，共 ${data.DateTimeQty2} 天`}
+                </div>,
+              );
             }
-          />
+          }
 
-          {/* Duration */}
-          <FieldRow
-            label="DURATION"
-            value={durationDays === 1 ? "Whole Day" : `${durationDays} days`}
-          />
+          // 其他假別
+          [1, 3, 4].forEach((i) => {
+            const start = data[`StartDate${i}`];
+            const end = data[`EndDate${i}`];
 
-          {/* From Time */}
-          <FieldRow label="FROM" value={event.startTime || "-"} />
+            if (!start || !end) return;
+            if (i === 1 && !data.IsBackHome) return;
+            if (i === 3 && !data.IsStayForeign) return;
+            if (i === 4 && !data.IsStayOther) return;
 
-          {/* Till Time */}
-          <FieldRow label="TILL" value={event.endTime || "-"} />
+            leaveRows.push(
+              <div key={`leave-${i}`}>
+                • <span className="font-medium">{INDEX_LABEL_MAP[i]}</span>：
+                {dayjs(start).format("M/D")} ~ {dayjs(end).format("M/D")}
+                {data[`LocationTo${i}`] && ` (${data[`LocationTo${i}`]})`}
+                {data[`DateTimeQty${i}`] &&
+                  `，共 ${data[`DateTimeQty${i}`]} 天`}
+              </div>,
+            );
+          });
 
-          {/* Type */}
-          {/* <FieldRow
-            label="TYPE"
-            value={event.description ? 'In-Person' : 'Virtual'}
-          /> */}
+          return (
+            <div className="space-y-4">
+              {/* ===== Header ===== */}
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="text-lg font-semibold text-gray-900">
+                    {data.EmployeeNameChinese}
+                  </div>
+                  <div className="text-sm text-gray-500">休假申請詳情</div>
+                </div>
 
-          {/* Location */}
-          {/* <FieldRow
-            label="LOCATION"
-            value={event.description || 'Not specified'}
-          /> */}
-
-          {/* Calendar Of */}
-          {/* <FieldRow label="CALENDAR OF" value="hi@dvinu.com" /> */}
-
-          {/* Color */}
-          <FieldRow
-            label="COLOR"
-            value={
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-5 h-5 rounded"
-                  style={{ backgroundColor: accentColors[event.color] }}
-                />
-                <span className="capitalize">{event.color}</span>
+                <div className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                  {data.FactoryName}
+                  {data.DeptName ? ` - ${data.DeptName}` : ""}
+                </div>
               </div>
-            }
-            isLast
-          />
 
-          {/* Schedule Event Button */}
-          <button className="w-full mt-8 py-3 md:py-4 bg-gray-900 text-white font-semibold rounded-2xl transition-all duration-200 hover:bg-gray-800 active:scale-95">
-            Schedule Event
-          </button>
-        </div>
-      )}
+              <div className="h-px bg-gray-200" />
+
+              {/* ===== Leave count ===== */}
+              <div className="text-gray-700 text-sm">
+                本年度第{" "}
+                <span className="font-semibold text-blue-600">
+                  {data.This_year_leave_time}
+                </span>{" "}
+                次休假
+              </div>
+
+              <div className="text-gray-700 text-sm">
+                休假期間：{" "}
+                <span className="font-semibold text-blue-600">
+                  {formatDate(data.StartDate)} ~ {formatDate(data.EndDate)}
+                </span>
+                ，共{" "}
+                <span className="font-semibold text-blue-600">
+                  {data.Total_leave_days}
+                </span>
+                天
+              </div>
+
+              {/* ===== Leave detail ===== */}
+              <div className="text-gray-700 text-sm">
+                <div className="space-y-1">{leaveRows}</div>
+              </div>
+            </div>
+          );
+        })()}
     </Modal>
   );
 };
