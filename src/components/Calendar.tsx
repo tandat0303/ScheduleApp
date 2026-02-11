@@ -25,7 +25,7 @@ import {
   FloatButton,
 } from "antd";
 import type { CustomTagProps } from "rc-select/lib/BaseSelect";
-import type { CalendarEvent, EventBar } from "../types";
+import type { CalendarEvent, EventBar, SearchParams } from "../types";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { mapLeaveToEvent } from "../lib/helpers";
 import MobileCalendar from "./MobileCalendar";
@@ -87,17 +87,7 @@ const CalendarApp: React.FC = () => {
     ...departmentOptions,
   ];
 
-  const [searchParams, setSearchParams] = useState<
-    | {
-        business_group?: string;
-        factory: string[] | "all";
-        department: string[] | "all";
-        name?: string;
-        date: string;
-      }
-    | null
-    | any
-  >({});
+  const [searchParams, setSearchParams] = useState<SearchParams | null>(null);
 
   const selectBusinessGroup = Form.useWatch("business_group", form);
   const selectedFactories = Form.useWatch("factory", form);
@@ -275,7 +265,7 @@ const CalendarApp: React.FC = () => {
               !(
                 displayEnd.isBefore(e.start, "day") ||
                 displayStart.isAfter(e.end, "day")
-              )
+              ),
           )
         ) {
           rowIndex++;
@@ -323,7 +313,7 @@ const CalendarApp: React.FC = () => {
       const maxRows = Math.max(...eventsInWeek.map((b) => b.row + 1));
       return `${EVENT_BASE_HEIGHT + maxRows * EVENT_ROW_HEIGHT}px`;
     },
-    [eventBars]
+    [eventBars],
   );
 
   const handleFactoryChange = (values: string[]) => {
@@ -359,13 +349,13 @@ const CalendarApp: React.FC = () => {
       const filtered = values.filter((v) => v !== "all");
       form.setFieldValue(
         "department",
-        filtered.length > 0 ? filtered : ["all"]
+        filtered.length > 0 ? filtered : ["all"],
       );
     } else if (values.includes("all") && previousValues.includes("all")) {
       const newValues = values.filter((v) => v !== "all");
       form.setFieldValue(
         "department",
-        newValues.length > 0 ? newValues : ["all"]
+        newValues.length > 0 ? newValues : ["all"],
       );
     } else if (values.length === 0) {
       form.setFieldValue("department", ["all"]);
@@ -488,7 +478,7 @@ const CalendarApp: React.FC = () => {
   }, []);
 
   return (
-    <div className="relative h-screen ">
+    <div className="relative h-screen overflow-hidden">
       {/* Loading */}
       {loading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#EAF7FD] transition-opacity duration-500">
@@ -715,7 +705,7 @@ const CalendarApp: React.FC = () => {
                   {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map(
                     (day) => (
                       <div key={day}>{day}</div>
-                    )
+                    ),
                   )}
                 </div>
 
