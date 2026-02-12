@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import dayjs, { Dayjs } from "dayjs";
 import isoWeek from "dayjs/plugin/isoWeek";
+import "dayjs/locale/zh-tw";
 import {
   LeftOutlined,
   RightOutlined,
@@ -24,6 +25,7 @@ import {
   Popover,
   FloatButton,
 } from "antd";
+import zhTW from "antd/locale/zh_TW";
 import type { CustomTagProps } from "rc-select/lib/BaseSelect";
 import type { CalendarEvent, EventBar, SearchParams } from "../types";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
@@ -39,6 +41,7 @@ import { businessGroupAPI } from "../services/business-group.api";
 import { SearchLoadingOverlay } from "./ui/SearchLoadingOverlay";
 
 dayjs.extend(isoWeek);
+dayjs.locale("zh-tw");
 
 const ANIMATION_DURATION = 300;
 const LOADING_DURATION = 1800;
@@ -95,18 +98,24 @@ const CalendarApp: React.FC = () => {
 
   const isPM = now.hour() >= 12;
 
-  useEffect(() => {
-    setSearchParams({
-      business_group: "",
-      factory: "all",
-      department: "all",
-      name: "",
-      date: dayjs().format("YYYY-MM"),
-    });
-  }, []);
+  // useEffect(() => {
+  //   setSearchParams({
+  //     business_group: "",
+  //     factory: "all",
+  //     department: "all",
+  //     name: "",
+  //     date: dayjs().format("YYYY-MM"),
+  //   });
+  // }, []);
 
   useEffect(() => {
-    if (!searchParams) return;
+    if (
+      !searchParams ||
+      !searchParams.business_group ||
+      businessGroupOptions.length === 0
+    ) {
+      return;
+    }
 
     const loadEvents = async () => {
       const startTime = Date.now();
@@ -132,13 +141,29 @@ const CalendarApp: React.FC = () => {
     };
 
     loadEvents();
-  }, [searchParams]);
+  }, [searchParams, businessGroupOptions]);
 
   useEffect(() => {
     const loadBusiness = async () => {
       try {
         const data = await businessGroupAPI.getAllBusinessGroup();
         setBusinessGroupOptions(data);
+
+        if (data && data.length > 0) {
+          const firstOption = data[0].value;
+
+          form.setFieldsValue({
+            business_group: firstOption,
+          });
+
+          setSearchParams({
+            business_group: firstOption,
+            factory: "all",
+            department: "all",
+            name: "",
+            date: dayjs().format("YYYY-MM"),
+          });
+        }
       } catch (err) {
         notify("error", "Error", "Load business group failed", 1.5);
       }
@@ -302,8 +327,19 @@ const CalendarApp: React.FC = () => {
   };
 
   const goToToday = () => {
-    setViewMonth(dayjs());
-    setDraftMonth(dayjs());
+    const currentMonth = dayjs();
+
+    setViewMonth(currentMonth);
+    setDraftMonth(currentMonth);
+
+    setSearchParams((prev) => {
+      if (!prev) return prev;
+
+      return {
+        ...prev,
+        date: currentMonth.format("YYYY-MM"),
+      };
+    });
   };
 
   const getWeekHeight = useCallback(
@@ -637,6 +673,7 @@ const CalendarApp: React.FC = () => {
                       <Form.Item label="休假日期" className="mb-0">
                         <DatePicker
                           picker="month"
+                          locale={zhTW.DatePicker}
                           value={draftMonth}
                           onChange={(date) => {
                             if (!date) return;

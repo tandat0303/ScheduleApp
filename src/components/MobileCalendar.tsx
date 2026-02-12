@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import dayjs, { Dayjs } from "dayjs";
 import isBetween from "dayjs/plugin/isBetween";
+import "dayjs/locale/zh-tw";
 import { DatePicker, Drawer, Form, Select, Input, Button } from "antd";
 import {
   MoonFilled,
@@ -8,6 +9,7 @@ import {
   LeftOutlined,
   RightOutlined,
 } from "@ant-design/icons";
+import zhTW from "antd/locale/zh_TW";
 import type { CustomTagProps } from "rc-select/lib/BaseSelect";
 import { SlidersHorizontal } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -25,6 +27,7 @@ import { mapLeaveToEvent } from "../lib/helpers";
 import { businessGroupAPI } from "../services/business-group.api";
 
 dayjs.extend(isBetween);
+dayjs.locale("zh-tw");
 
 const ANIMATION_DURATION = 300;
 const TIME_UPDATE_INTERVAL = 1000;
@@ -98,18 +101,24 @@ const MobileCalendar: React.FC = () => {
     return () => clearTimeout(t);
   }, [direction]);
 
-  useEffect(() => {
-    setSearchParams({
-      business_group: "",
-      factory: "all",
-      department: "all",
-      name: "",
-      date: dayjs().format("YYYY-MM"),
-    });
-  }, []);
+  // useEffect(() => {
+  //   setSearchParams({
+  //     business_group: "",
+  //     factory: "all",
+  //     department: "all",
+  //     name: "",
+  //     date: dayjs().format("YYYY-MM"),
+  //   });
+  // }, []);
 
   useEffect(() => {
-    if (!searchParams) return;
+    if (
+      !searchParams ||
+      !searchParams.business_group ||
+      businessGroupOptions.length === 0
+    ) {
+      return;
+    }
 
     const loadEvents = async () => {
       try {
@@ -127,13 +136,29 @@ const MobileCalendar: React.FC = () => {
     };
 
     loadEvents();
-  }, [searchParams]);
+  }, [searchParams, businessGroupOptions]);
 
   useEffect(() => {
     const loadBusiness = async () => {
       try {
         const data = await businessGroupAPI.getAllBusinessGroup();
         setBusinessGroupOptions(data);
+
+        if (data && data.length > 0) {
+          const firstOption = data[0].value;
+
+          form.setFieldsValue({
+            business_group: firstOption,
+          });
+
+          setSearchParams({
+            business_group: firstOption,
+            factory: "all",
+            department: "all",
+            name: "",
+            date: dayjs().format("YYYY-MM"),
+          });
+        }
       } catch (err) {
         notify("error", "Error", "Load business group failed", 1.5);
       }
@@ -227,8 +252,11 @@ const MobileCalendar: React.FC = () => {
   // }, []);
 
   const goToToday = useCallback(() => {
-    setViewMonth(dayjs());
-    setDraftMonth(dayjs());
+    const currentMonth = dayjs();
+
+    setViewMonth(currentMonth);
+    setDraftMonth(currentMonth);
+    setSelectedDate(currentMonth);
 
     setTimeout(() => {
       const todayKey = dayjs().format("YYYY-MM-DD");
@@ -240,6 +268,15 @@ const MobileCalendar: React.FC = () => {
         block: "nearest",
       });
     }, 100);
+
+    setSearchParams((prev) => {
+      if (!prev) return prev;
+
+      return {
+        ...prev,
+        date: currentMonth.format("YYYY-MM"),
+      };
+    });
   }, []);
 
   const openEventModal = useCallback((event: CalendarEvent) => {
@@ -423,11 +460,13 @@ const MobileCalendar: React.FC = () => {
 
       {/* NAVIGATION BUTTONS */}
       <div className="mb-4 flex items-center justify-between bg-white rounded-lg p-3 border">
-        <Button type="primary" onClick={goToToday} className="bg-[#1e64ee]">
-          今天
-        </Button>
+        <span className="font-bold">{viewMonth.format("MMMM, YYYY")}</span>
 
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <Button type="primary" onClick={goToToday} className="bg-[#1e64ee]">
+            今天
+          </Button>
+
           <button
             onClick={goToPreviousMonth}
             className="w-10 h-10 hover:bg-gray-100 transition-all rounded-lg flex items-center justify-center"
@@ -542,7 +581,7 @@ const MobileCalendar: React.FC = () => {
         onClose={() => setFilterOpen(false)}
         placement="bottom"
         size="auto"
-        title="Filter"
+        title="篩選資料"
       >
         <Form
           form={form}
@@ -593,9 +632,10 @@ const MobileCalendar: React.FC = () => {
           </Form.Item>
 
           {/* Leave Date - Month Picker */}
-          <Form.Item label="休假日期" name="leaveDate">
+          <Form.Item label="休假日期">
             <DatePicker
               picker="month"
+              locale={zhTW.DatePicker}
               value={draftMonth}
               onChange={(date) => {
                 if (!date) return;

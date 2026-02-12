@@ -14,9 +14,7 @@ export const EmptyState = () => (
       alt="No events"
       className="mx-auto mb-4 w-20 h-20 opacity-80"
     />
-    <div className="text-lg font-semibold text-gray-500">
-      No events for this day
-    </div>
-    <div className="text-sm text-gray-400 mt-1">Enjoy your free time</div>
+    <div className="text-lg font-semibold text-gray-500">本日無請假人員</div>
+    {/* <div className="text-sm text-gray-400 mt-1">Enjoy your free time</div> */}
   </motion.div>
 );
