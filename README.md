@@ -1,73 +1,96 @@
-# React + TypeScript + Vite
+# ScheduleApp
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern **React + TypeScript + Vite** schedule planner web application.  
+This project provides a lightweight foundation for building an interactive scheduling or calendar-style app using the latest frontend tooling.
 
-Currently, two official plugins are available:
+🔗 **Live Demo:** https://lyv-schedule-app.vercel.app/
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## React Compiler
+## 🚀 Features
 
-The React Compiler is currently not compatible with SWC. See [this issue](https://github.com/vitejs/vite-plugin-react/issues/428) for tracking the progress.
+✅ Built with **React**, **TypeScript**, and **Vite**  
+✅ Fast development experience with hot module replacement  
+✅ Structured for scalability and future feature additions  
+✅ Tailwind CSS configured for utility-first styling  
+✅ Clean starter template for scheduling functionality
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 🧠 What You Can Build With This
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+This repository is ideal as a starting point for:
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- Personal planner or calendar app
+- Task & time management dashboard
+- Appointment scheduling interface
+- Event timeline or daily agenda UI
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+---
+
+## 🛠 Getting Started
+
+### 📦 Clone the repo
+
+```sh
+git clone https://github.com/tandat0303/ScheduleApp.git
+cd ScheduleApp
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 📥 Install dependencies
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```sh
+npm install
+# or
+yarn
 ```
+
+### 🚀 Run locally
+
+```sh
+npm run dev
+# or
+yarn dev
+```
+
+The app will be available at: http://localhost:5174[http://localhost:5174]
+
+---
+
+## 💡 Stack
+
+| Technology       | Description                  |
+| ---------------- | ---------------------------- |
+| **React**        | UI Library                   |
+| **Vite**         | Fast build tool & dev server |
+| \*\*TypeScript   | Strong typing                |
+| **Tailwind CSS** | Utility-first styling        |
+
+---
+
+## Author
+
+👤 **Truong Tan Dat**
+
+- Website: https://truongtandat.vercel.app/
+- Github: [@tandat0303](https://github.com/tandat0303)
+- LinkedIn: [Tan Dat Truong](https://www.linkedin.com/in/tan-dat-truong-71a760364/)
+
+---
+
+## Support
+
+If you find this project useful:
+
+⭐ Star the repository
+
+🐞 Report issues
+
+💡 Suggest new features
+
+---
+
+## 📝 License
+
+Copyright © 2026 [Truong Tan Dat](https://github.com/tandat0303).<br />
+This project is [MIT](https://github.com/tandat0303/ScheduleApp?tab=MIT-1-ov-file) licensed.
