@@ -80,6 +80,19 @@ const MobileCalendar: React.FC = () => {
   }, [direction]);
 
   useEffect(() => {
+    setTimeout(() => {
+      const todayKey = dayjs().format("YYYY-MM-DD");
+      const el = dayRefs.current[todayKey];
+
+      el?.scrollIntoView({
+        behavior: "smooth",
+        inline: "center",
+        block: "nearest",
+      });
+    }, 100);
+  }, []);
+
+  useEffect(() => {
     if (!searchParams || !searchParams.business_group) {
       return;
     }
