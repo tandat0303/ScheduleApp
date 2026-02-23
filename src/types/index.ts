@@ -1,4 +1,5 @@
 import { Dayjs } from "dayjs";
+import type { CustomTagProps } from "rc-select/lib/BaseSelect";
 
 export interface CalendarEvent {
   id: string;
@@ -119,3 +120,13 @@ export type SearchParams = {
   name?: string;
   date: string;
 };
+
+export interface NavigationProps {
+  goToToday: () => void;
+  goToPreviousMonth: () => void;
+  goToNextMonth: () => void;
+}
+
+export interface SelectTagProps extends CustomTagProps {
+  selectedCount?: number;
+}

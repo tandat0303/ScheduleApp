@@ -180,3 +180,20 @@ export function getDatesBetween(start: string, end: string): string[] {
 
   return result;
 }
+
+export const resolveFactoryIds = (
+  selectedFactories: string[],
+  factoryOptions: { value: string }[],
+) => {
+  if (!selectedFactories?.length) return [];
+
+  if (selectedFactories.length === 1 && selectedFactories.includes("all")) {
+    return [];
+  }
+
+  if (selectedFactories.includes("all")) {
+    return factoryOptions.filter((f) => f.value !== "all").map((f) => f.value);
+  }
+
+  return selectedFactories.filter((f) => f !== "all");
+};

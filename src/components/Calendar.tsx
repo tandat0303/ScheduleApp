@@ -1,20 +1,8 @@
-import React, {
-  useState,
-  useMemo,
-  useEffect,
-  useCallback,
-  useRef,
-} from "react";
+import React, { useState, useEffect, useRef } from "react";
 import dayjs, { Dayjs } from "dayjs";
 import isoWeek from "dayjs/plugin/isoWeek";
 import "dayjs/locale/zh-tw";
-import {
-  LeftOutlined,
-  RightOutlined,
-  MoonFilled,
-  SunFilled,
-  ArrowUpOutlined,
-} from "@ant-design/icons";
+import { MoonFilled, SunFilled, ArrowUpOutlined } from "@ant-design/icons";
 import {
   DatePicker,
   Select,
@@ -26,30 +14,31 @@ import {
   FloatButton,
 } from "antd";
 import zhTW from "antd/locale/zh_TW";
-import type { CustomTagProps } from "rc-select/lib/BaseSelect";
-import type { CalendarEvent, EventBar, SearchParams } from "../types";
-import { DotLottieReact } from "@lottiefiles/dotlottie-react";
+import type { CalendarEvent } from "../types";
 import { mapLeaveToEvent } from "../lib/helpers";
 import MobileCalendar from "./MobileCalendar";
 import { EventPopover } from "./EventPopover";
-import LYGLogo from "../assets/LYLogo_White 1.png";
-import { factoryAPI } from "../services/factory.api";
-import { notify } from "./ui/Notification";
-import { departmentAPI } from "../services/department.api";
 import { leaveAPI } from "../services/leave.api";
-import { businessGroupAPI } from "../services/business-group.api";
 import { SearchLoadingOverlay } from "./ui/SearchLoadingOverlay";
+import {
+  ANIMATION_DURATION,
+  GRID_BACKGROUND_SIZE,
+  LOADING_DURATION,
+  MIN_SEARCH_LOADING,
+  TIME_UPDATE_INTERVAL,
+} from "../lib/constant";
+import AppLoading from "./ui/AppLoading";
+import Header from "./Header";
+import CalendarNavigation from "./CalendarNavigation";
+import { useCalendarGrid } from "../hooks/useCalendarGrid";
+import { useEventBars } from "../hooks/useEventBars";
+import { useWeekHeight } from "../hooks/useWeekHeight";
+import SelectTag from "./ui/SelectTag";
+import { useLeaveFilter } from "../hooks/useLeaveFilter";
+import { notify } from "./ui/Notification";
 
 dayjs.extend(isoWeek);
 dayjs.locale("zh-tw");
-
-const ANIMATION_DURATION = 300;
-const LOADING_DURATION = 1800;
-const TIME_UPDATE_INTERVAL = 1000;
-const GRID_BACKGROUND_SIZE = "16px 16px";
-const EVENT_ROW_HEIGHT = 38; // Reduced from 48
-const EVENT_BASE_HEIGHT = 56; // Reduced from 72
-const MIN_SEARCH_LOADING = 600;
 
 const CalendarApp: React.FC = () => {
   const calendarRef = useRef<HTMLDivElement>(null);
@@ -68,52 +57,27 @@ const CalendarApp: React.FC = () => {
 
   const [form] = Form.useForm();
 
-  const [businessGroupOptions, setBusinessGroupOptions] = useState<
-    { label: string; value: string }[]
-  >([]);
+  const {
+    businessGroupOptions,
+    factoryOptions,
+    departmentOptions,
+    searchParams,
+    setSearchParams,
+    handleMultiChange,
+    handleSearch,
+  } = useLeaveFilter(form);
 
-  const [factoryOptions, setFactoryOptions] = useState<
-    { label: string; value: string }[]
-  >([]);
-
-  const factorySelectOptions = [
-    { label: "全部", value: "all" },
-    ...factoryOptions,
-  ];
-
-  const [departmentOptions, setDepartmentOptions] = useState<
-    { label: string; value: string }[]
-  >([]);
-
-  const departmentSelectOptions = [
-    { label: "全部", value: "all" },
-    ...departmentOptions,
-  ];
-
-  const [searchParams, setSearchParams] = useState<SearchParams | null>(null);
-
-  const selectBusinessGroup = Form.useWatch("business_group", form);
-  const selectedFactories = Form.useWatch("factory", form);
-  const selectedDepartments = Form.useWatch("department", form);
+  const selectedFactories = Form.useWatch("factory", form) || [];
+  const selectedDepartments = Form.useWatch("department", form) || [];
 
   const isPM = now.hour() >= 12;
 
-  // useEffect(() => {
-  //   setSearchParams({
-  //     business_group: "",
-  //     factory: "all",
-  //     department: "all",
-  //     name: "",
-  //     date: dayjs().format("YYYY-MM"),
-  //   });
-  // }, []);
+  const calendarGrid = useCalendarGrid(viewMonth);
+  const eventBars = useEventBars(calendarGrid, events);
+  const getWeekHeight = useWeekHeight(eventBars);
 
   useEffect(() => {
-    if (
-      !searchParams ||
-      !searchParams.business_group ||
-      businessGroupOptions.length === 0
-    ) {
+    if (!searchParams || !searchParams.business_group) {
       return;
     }
 
@@ -141,90 +105,7 @@ const CalendarApp: React.FC = () => {
     };
 
     loadEvents();
-  }, [searchParams, businessGroupOptions]);
-
-  useEffect(() => {
-    const loadBusiness = async () => {
-      try {
-        const data = await businessGroupAPI.getAllBusinessGroup();
-        setBusinessGroupOptions(data);
-
-        if (data && data.length > 0) {
-          const firstOption = data[0].value;
-
-          form.setFieldsValue({
-            business_group: firstOption,
-          });
-
-          setSearchParams({
-            business_group: firstOption,
-            factory: "all",
-            department: "all",
-            name: "",
-            date: dayjs().format("YYYY-MM"),
-          });
-        }
-      } catch (err) {
-        notify("error", "Error", "Load business group failed", 1.5);
-      }
-    };
-
-    loadBusiness();
-  }, []);
-
-  useEffect(() => {
-    if (!selectBusinessGroup || selectBusinessGroup.trim() === "") {
-      setFactoryOptions([]);
-      form.setFieldsValue({
-        factory: ["all"],
-        department: ["all"],
-      });
-      return;
-    }
-
-    const loadFactories = async () => {
-      try {
-        const data = await factoryAPI.getAllFactories(selectBusinessGroup);
-        setFactoryOptions(data);
-
-        form.setFieldsValue({
-          factory: ["all"],
-          department: ["all"],
-        });
-      } catch (err) {
-        notify("error", "Error", "Load factories failed", 1.5);
-        setFactoryOptions([]);
-      }
-    };
-
-    loadFactories();
-  }, [selectBusinessGroup, form]);
-
-  useEffect(() => {
-    if (!factoryOptions.length) return;
-
-    const loadDepartments = async () => {
-      try {
-        const factoryIds =
-          selectedFactories && selectedFactories.length > 0
-            ? selectedFactories.filter((f: string) => f !== "all")
-            : factoryOptions.map((f) => f.value);
-
-        const data = await departmentAPI.getAllDepartments(factoryIds);
-        setDepartmentOptions(data);
-
-        // Reset department to "all" when factory changes
-        if (!selectedDepartments || selectedDepartments.length === 0) {
-          form.setFieldValue("department", ["all"]);
-        }
-      } catch (err) {
-        console.error("Load department error:", err);
-        setDepartmentOptions([]);
-      }
-    };
-
-    loadDepartments();
-  }, [selectedFactories, factoryOptions]);
+  }, [searchParams]);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(dayjs()), TIME_UPDATE_INTERVAL);
@@ -248,73 +129,6 @@ const CalendarApp: React.FC = () => {
     const t = setTimeout(() => setDirection(null), ANIMATION_DURATION);
     return () => clearTimeout(t);
   }, [direction]);
-
-  const calendarGrid = useMemo(() => {
-    const start = viewMonth.startOf("month").startOf("isoWeek");
-    const end = viewMonth.endOf("month").endOf("isoWeek");
-    const weeks: Dayjs[][] = [];
-    let current = start;
-
-    while (current.isBefore(end) || current.isSame(end, "day")) {
-      const week: Dayjs[] = [];
-      for (let i = 0; i < 7; i++) {
-        week.push(current);
-        current = current.add(1, "day");
-      }
-      weeks.push(week);
-    }
-    return weeks;
-  }, [viewMonth]);
-
-  const eventBars = useMemo(() => {
-    const bars: EventBar[] = [];
-
-    calendarGrid.forEach((week, weekIndex) => {
-      const rows: { start: Dayjs; end: Dayjs; event: CalendarEvent }[][] = [];
-
-      events.forEach((event) => {
-        const start = dayjs(event.startDate).startOf("day");
-        const end = dayjs(event.endDate).startOf("day");
-        const weekStart = week[0];
-        const weekEnd = week[6];
-
-        if (end.isBefore(weekStart) || start.isAfter(weekEnd)) return;
-
-        const displayStart = start.isBefore(weekStart) ? weekStart : start;
-        const displayEnd = end.isAfter(weekEnd) ? weekEnd : end;
-
-        let rowIndex = 0;
-        while (
-          rows[rowIndex]?.some(
-            (e) =>
-              !(
-                displayEnd.isBefore(e.start, "day") ||
-                displayStart.isAfter(e.end, "day")
-              ),
-          )
-        ) {
-          rowIndex++;
-        }
-
-        if (!rows[rowIndex]) rows[rowIndex] = [];
-        rows[rowIndex].push({ start: displayStart, end: displayEnd, event });
-      });
-
-      rows.forEach((rowEvents, rowIndex) => {
-        rowEvents.forEach(({ event, start, end }) => {
-          bars.push({
-            event,
-            startCol: start.diff(week[0], "day"),
-            span: end.diff(start, "day") + 1,
-            row: rowIndex,
-            weekIndex,
-          });
-        });
-      });
-    });
-
-    return bars;
-  }, [calendarGrid, events]);
 
   const goToPreviousMonth = () => {
     setDirection("prev");
@@ -342,126 +156,6 @@ const CalendarApp: React.FC = () => {
     });
   };
 
-  const getWeekHeight = useCallback(
-    (weekIndex: number) => {
-      const eventsInWeek = eventBars.filter((b) => b.weekIndex === weekIndex);
-      if (eventsInWeek.length === 0) return `${EVENT_BASE_HEIGHT}px`;
-      const maxRows = Math.max(...eventsInWeek.map((b) => b.row + 1));
-      return `${EVENT_BASE_HEIGHT + maxRows * EVENT_ROW_HEIGHT}px`;
-    },
-    [eventBars],
-  );
-
-  const handleFactoryChange = (values: string[]) => {
-    const previousValues = form.getFieldValue("factory") || [];
-
-    if (values.includes("all") && !previousValues.includes("all")) {
-      form.setFieldValue("factory", [
-        "all",
-        ...factoryOptions.map((f) => f.value),
-      ]);
-    } else if (!values.includes("all") && previousValues.includes("all")) {
-      const filtered = values.filter((v) => v !== "all");
-      form.setFieldValue("factory", filtered.length > 0 ? filtered : ["all"]);
-    } else if (values.includes("all") && previousValues.includes("all")) {
-      const newValues = values.filter((v) => v !== "all");
-      form.setFieldValue("factory", newValues.length > 0 ? newValues : ["all"]);
-    } else if (values.length === 0) {
-      form.setFieldValue("factory", ["all"]);
-    } else {
-      form.setFieldValue("factory", values);
-    }
-  };
-
-  const handleDepartmentChange = (values: string[]) => {
-    const previousValues = form.getFieldValue("department") || [];
-
-    if (values.includes("all") && !previousValues.includes("all")) {
-      form.setFieldValue("department", [
-        "all",
-        ...departmentOptions.map((d) => d.value),
-      ]);
-    } else if (!values.includes("all") && previousValues.includes("all")) {
-      const filtered = values.filter((v) => v !== "all");
-      form.setFieldValue(
-        "department",
-        filtered.length > 0 ? filtered : ["all"],
-      );
-    } else if (values.includes("all") && previousValues.includes("all")) {
-      const newValues = values.filter((v) => v !== "all");
-      form.setFieldValue(
-        "department",
-        newValues.length > 0 ? newValues : ["all"],
-      );
-    } else if (values.length === 0) {
-      form.setFieldValue("department", ["all"]);
-    } else {
-      form.setFieldValue("department", values);
-    }
-  };
-
-  const handleSearch = (values: any) => {
-    const factory =
-      !values.factory || values.factory.includes("all")
-        ? "all"
-        : values.factory.filter((f: string) => f !== "all");
-
-    const department =
-      !values.department || values.department.includes("all")
-        ? "all"
-        : values.department.filter((d: string) => d !== "all");
-
-    setViewMonth(draftMonth);
-
-    setSearchParams({
-      business_group: values.business_group,
-      factory,
-      department,
-      name: values.name,
-      date: draftMonth.format("YYYY-MM"),
-    });
-  };
-
-  const customTagRender = (props: CustomTagProps) => {
-    const { label, value, closable, onClose } = props;
-
-    if (
-      value === "all" &&
-      (selectedFactories?.length === 1 || selectedDepartments?.length === 1)
-    ) {
-      return <></>;
-    }
-
-    return (
-      <span
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          padding: "0 8px",
-          height: 24,
-          marginRight: 4,
-          backgroundColor: "#f0f0f0",
-          border: "1px solid #d9d9d9",
-          borderRadius: 4,
-        }}
-      >
-        {label}
-        {closable && (
-          <span
-            onClick={onClose}
-            style={{
-              marginLeft: 4,
-              cursor: "pointer",
-              fontSize: 12,
-            }}
-          >
-            ×
-          </span>
-        )}
-      </span>
-    );
-  };
-
   const handleResize = () => {
     setWindowHeight(window.innerHeight - 280);
   };
@@ -480,7 +174,6 @@ const CalendarApp: React.FC = () => {
     if (calendarRef.current) {
       calendarRef.current.scrollTop = 0;
 
-      // Alternatively, you can use the scroll method with options for smooth behavior:
       calendarRef.current.scroll({
         top: 0,
         behavior: "smooth",
@@ -516,16 +209,7 @@ const CalendarApp: React.FC = () => {
   return (
     <div className="relative h-screen overflow-hidden">
       {/* Loading */}
-      {loading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#EAF7FD] transition-opacity duration-500">
-          <DotLottieReact
-            src="/Flight.lottie"
-            autoplay
-            loop
-            style={{ width: 220, height: 220 }}
-          />
-        </div>
-      )}
+      {loading && <AppLoading />}
 
       <div
         className={`h-full flex flex-col transition-opacity duration-500 ${
@@ -533,39 +217,7 @@ const CalendarApp: React.FC = () => {
         }`}
       >
         {/* ===== Top Header ===== */}
-        <div className="bg-white flex-shrink-0 md:mb-5">
-          <div
-            className="w-full mx-auto px-8 py-3 flex items-center justify-between"
-            style={{ boxShadow: "rgba(149, 157, 165, 0.2) 0px 8px 24px" }}
-          >
-            {/* Left */}
-            <div className="flex items-stretch gap-3">
-              {/* LYG – stretch full height */}
-              <div className="flex items-center text-2xl md:text-4xl font-extrabold text-[#1e64ee] leading-none">
-                LYG
-              </div>
-
-              {/* Right text – 2 rows */}
-              <div className="flex flex-col justify-between leading-tight">
-                <div className="text-xl font-semibold text-gray-900">
-                  外籍主管休假行事曆
-                </div>
-                <div className="text-sm text-gray-500">
-                  Expat Manager Leave Calendar
-                </div>
-              </div>
-            </div>
-
-            {/* Right icon */}
-            <div className="flex items-center">
-              <img
-                src={LYGLogo}
-                alt="LYG"
-                className="h-12 w-auto object-contain"
-              />
-            </div>
-          </div>
-        </div>
+        <Header />
 
         <div className="box-border px-8">
           <div className="hidden md:block">
@@ -608,7 +260,7 @@ const CalendarApp: React.FC = () => {
                 <Form
                   form={form}
                   layout="vertical"
-                  onFinish={handleSearch}
+                  onFinish={(values) => handleSearch(values, draftMonth)}
                   initialValues={{
                     business_group: "",
                     factory: ["all"],
@@ -628,8 +280,6 @@ const CalendarApp: React.FC = () => {
                           options={businessGroupOptions}
                           maxTagCount={2}
                           style={{ width: 160 }}
-                          tagRender={customTagRender}
-                          allowClear
                         />
                       </Form.Item>
 
@@ -637,12 +287,26 @@ const CalendarApp: React.FC = () => {
                       <Form.Item label="廠別" name="factory" className="mb-0">
                         <Select
                           mode="multiple"
-                          options={factorySelectOptions}
+                          options={factoryOptions}
                           maxTagCount={2}
                           style={{ width: 160 }}
-                          tagRender={customTagRender}
+                          tagRender={(props) => {
+                            if (props.value === "all") return <></>;
+                            return (
+                              <SelectTag
+                                {...props}
+                                selectedCount={
+                                  selectedFactories?.includes("all")
+                                    ? 0
+                                    : selectedFactories?.length
+                                }
+                              />
+                            );
+                          }}
                           allowClear
-                          onChange={handleFactoryChange}
+                          onChange={(values) =>
+                            handleMultiChange("factory", values, factoryOptions)
+                          }
                         />
                       </Form.Item>
 
@@ -654,12 +318,30 @@ const CalendarApp: React.FC = () => {
                       >
                         <Select
                           mode="multiple"
-                          options={departmentSelectOptions}
+                          options={departmentOptions}
                           maxTagCount={2}
                           style={{ width: 180 }}
-                          onChange={handleDepartmentChange}
+                          onChange={(values) =>
+                            handleMultiChange(
+                              "department",
+                              values,
+                              departmentOptions,
+                            )
+                          }
                           // loading={departmentOptions.length === 0}
-                          tagRender={customTagRender}
+                          tagRender={(props) => {
+                            if (props.value === "all") return <></>;
+                            return (
+                              <SelectTag
+                                {...props}
+                                selectedCount={
+                                  selectedDepartments?.includes("all")
+                                    ? 0
+                                    : selectedDepartments?.length
+                                }
+                              />
+                            );
+                          }}
                           allowClear
                         />
                       </Form.Item>
@@ -702,27 +384,11 @@ const CalendarApp: React.FC = () => {
 
               {/* Navigation Bar */}
               <div className="flex justify-end gap-4 items-end">
-                <Button
-                  type="primary"
-                  onClick={goToToday}
-                  className="text-white rounded-full bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800 font-medium rounded-base text-sm !hover:text-white px-4 py-2.5 text-center leading-5"
-                >
-                  今天
-                </Button>
-                <div className="flex gap-1">
-                  <button
-                    onClick={goToPreviousMonth}
-                    className="w-8 h-8 text-white bg-gradient-to-r from-orange-500 via-orange-600 to-orange-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-orange-300 dark:focus:ring-orange-800 font-medium rounded-full text-sm p-1 text-center"
-                  >
-                    <LeftOutlined />
-                  </button>
-                  <button
-                    onClick={goToNextMonth}
-                    className="w-8 h-8 text-white bg-gradient-to-r from-orange-500 via-orange-600 to-orange-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-orange-300 dark:focus:ring-orange-800 font-medium rounded-full text-sm p-1 text-center"
-                  >
-                    <RightOutlined />
-                  </button>
-                </div>
+                <CalendarNavigation
+                  goToToday={goToToday}
+                  goToPreviousMonth={goToPreviousMonth}
+                  goToNextMonth={goToNextMonth}
+                />
               </div>
             </div>
 

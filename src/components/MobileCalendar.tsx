@@ -3,34 +3,27 @@ import dayjs, { Dayjs } from "dayjs";
 import isBetween from "dayjs/plugin/isBetween";
 import "dayjs/locale/zh-tw";
 import { DatePicker, Drawer, Form, Select, Input, Button } from "antd";
-import {
-  MoonFilled,
-  SunFilled,
-  LeftOutlined,
-  RightOutlined,
-} from "@ant-design/icons";
+import { MoonFilled, SunFilled } from "@ant-design/icons";
 import zhTW from "antd/locale/zh_TW";
-import type { CustomTagProps } from "rc-select/lib/BaseSelect";
 import { SlidersHorizontal } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
-import type { CalendarEvent, SearchParams } from "../types";
+import type { CalendarEvent } from "../types";
 import EventDetailModal from "./EventDetailModal";
 import { EventSkeleton } from "./ui/EventSkeleton";
 import { EmptyState } from "./ui/EmptyState";
 
-import { factoryAPI } from "../services/factory.api";
-import { departmentAPI } from "../services/department.api";
 import { notify } from "./ui/Notification";
 import { leaveAPI } from "../services/leave.api";
 import { mapLeaveToEvent } from "../lib/helpers";
-import { businessGroupAPI } from "../services/business-group.api";
+
+import { ANIMATION_DURATION, TIME_UPDATE_INTERVAL } from "../lib/constant";
+import CalendarNavigation from "./CalendarNavigation";
+import SelectTag from "./ui/SelectTag";
+import { useLeaveFilter } from "../hooks/useLeaveFilter";
 
 dayjs.extend(isBetween);
 dayjs.locale("zh-tw");
-
-const ANIMATION_DURATION = 300;
-const TIME_UPDATE_INTERVAL = 1000;
 
 const MobileCalendar: React.FC = () => {
   const [form] = Form.useForm();
@@ -52,29 +45,18 @@ const MobileCalendar: React.FC = () => {
 
   const [filterOpen, setFilterOpen] = useState(false);
 
-  const [businessGroupOptions, setBusinessGroupOptions] = useState<
-    { label: string; value: string }[]
-  >([]);
+  const {
+    businessGroupOptions,
+    factoryOptions,
+    departmentOptions,
+    searchParams,
+    setSearchParams,
+    handleMultiChange,
+    handleSearch,
+  } = useLeaveFilter(form);
 
-  const [factoryOptions, setFactoryOptions] = useState<
-    { label: string; value: string }[]
-  >([]);
-
-  const factorySelectOptions = [
-    { label: "全部", value: "all" },
-    ...factoryOptions,
-  ];
-
-  const [departmentOptions, setDepartmentOptions] = useState<
-    { label: string; value: string }[]
-  >([]);
-
-  const departmentSelectOptions = [
-    { label: "全部", value: "all" },
-    ...departmentOptions,
-  ];
-
-  const [searchParams, setSearchParams] = useState<SearchParams | null>(null);
+  const selectedFactories = Form.useWatch("factory", form) || [];
+  const selectedDepartments = Form.useWatch("department", form) || [];
 
   const dayRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const setDayRef = useCallback(
@@ -83,10 +65,6 @@ const MobileCalendar: React.FC = () => {
     },
     [],
   );
-
-  const selectBusinessGroup = Form.useWatch("business_group", form);
-  const selectedFactories = Form.useWatch("factory", form);
-  const selectedDepartments = Form.useWatch("department", form);
 
   const isPM = now.hour() >= 12;
 
@@ -101,22 +79,8 @@ const MobileCalendar: React.FC = () => {
     return () => clearTimeout(t);
   }, [direction]);
 
-  // useEffect(() => {
-  //   setSearchParams({
-  //     business_group: "",
-  //     factory: "all",
-  //     department: "all",
-  //     name: "",
-  //     date: dayjs().format("YYYY-MM"),
-  //   });
-  // }, []);
-
   useEffect(() => {
-    if (
-      !searchParams ||
-      !searchParams.business_group ||
-      businessGroupOptions.length === 0
-    ) {
+    if (!searchParams || !searchParams.business_group) {
       return;
     }
 
@@ -136,89 +100,7 @@ const MobileCalendar: React.FC = () => {
     };
 
     loadEvents();
-  }, [searchParams, businessGroupOptions]);
-
-  useEffect(() => {
-    const loadBusiness = async () => {
-      try {
-        const data = await businessGroupAPI.getAllBusinessGroup();
-        setBusinessGroupOptions(data);
-
-        if (data && data.length > 0) {
-          const firstOption = data[0].value;
-
-          form.setFieldsValue({
-            business_group: firstOption,
-          });
-
-          setSearchParams({
-            business_group: firstOption,
-            factory: "all",
-            department: "all",
-            name: "",
-            date: dayjs().format("YYYY-MM"),
-          });
-        }
-      } catch (err) {
-        notify("error", "Error", "Load business group failed", 1.5);
-      }
-    };
-
-    loadBusiness();
-  }, []);
-
-  useEffect(() => {
-    if (!selectBusinessGroup || selectBusinessGroup.trim() === "") {
-      setFactoryOptions([]);
-      form.setFieldsValue({
-        factory: ["all"],
-        department: ["all"],
-      });
-      return;
-    }
-
-    const loadFactories = async () => {
-      try {
-        const data = await factoryAPI.getAllFactories(selectBusinessGroup);
-        setFactoryOptions(data);
-
-        form.setFieldsValue({
-          factory: ["all"],
-          department: ["all"],
-        });
-      } catch (err) {
-        notify("error", "Error", "Load factories failed", 1.5);
-        setFactoryOptions([]);
-      }
-    };
-
-    loadFactories();
-  }, [selectBusinessGroup, form]);
-
-  useEffect(() => {
-    if (!factoryOptions.length) return;
-
-    const loadDepartments = async () => {
-      try {
-        const factoryIds =
-          selectedFactories && selectedFactories.length > 0
-            ? selectedFactories.filter((f: string) => f !== "all")
-            : factoryOptions.map((f) => f.value);
-
-        const data = await departmentAPI.getAllDepartments(factoryIds);
-        setDepartmentOptions(data);
-
-        if (!selectedDepartments || selectedDepartments.length === 0) {
-          form.setFieldValue("department", ["all"]);
-        }
-      } catch (err) {
-        console.error("Load department error:", err);
-        setDepartmentOptions([]);
-      }
-    };
-
-    loadDepartments();
-  }, [selectedFactories, factoryOptions]);
+  }, [searchParams]);
 
   const goToPreviousMonth = useCallback(() => {
     setDirection("prev");
@@ -229,27 +111,6 @@ const MobileCalendar: React.FC = () => {
     setDirection("next");
     setViewMonth((d) => d.add(1, "month"));
   }, []);
-
-  // const goToToday = useCallback(() => {
-  //   setViewMonth(dayjs());
-  //   setDraftMonth(dayjs());
-
-  //   setTimeout(() => {
-  //     const todayKey = dayjs().format("YYYY-MM-DD");
-  //     const el = dayRefs.current[todayKey];
-
-  //     if (el?.parentElement) {
-  //       const container = el.parentElement;
-  //       const offset =
-  //         el.offsetLeft - container.clientWidth / 2 + el.clientWidth / 2;
-
-  //       container.scrollTo({
-  //         left: offset,
-  //         behavior: "smooth",
-  //       });
-  //     }
-  //   }, 100);
-  // }, []);
 
   const goToToday = useCallback(() => {
     const currentMonth = dayjs();
@@ -288,117 +149,6 @@ const MobileCalendar: React.FC = () => {
     setIsModalOpen(false);
     setSelectedEvent(null);
   }, []);
-
-  const customTagRender = (props: CustomTagProps) => {
-    const { label, value, closable, onClose } = props;
-
-    if (
-      value === "all" &&
-      (selectedFactories?.length === 1 || selectedDepartments?.length === 1)
-    ) {
-      return <></>;
-    }
-
-    return (
-      <span
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          padding: "0 8px",
-          height: 24,
-          marginRight: 4,
-          backgroundColor: "#f0f0f0",
-          border: "1px solid #d9d9d9",
-          borderRadius: 4,
-        }}
-      >
-        {label}
-        {closable && (
-          <span
-            onClick={onClose}
-            style={{ marginLeft: 4, cursor: "pointer", fontSize: 12 }}
-          >
-            ×
-          </span>
-        )}
-      </span>
-    );
-  };
-
-  const handleFactoryChange = (values: string[]) => {
-    const previousValues = form.getFieldValue("factory") || [];
-
-    if (values.includes("all") && !previousValues.includes("all")) {
-      form.setFieldValue("factory", [
-        "all",
-        ...factoryOptions.map((f) => f.value),
-      ]);
-    } else if (!values.includes("all") && previousValues.includes("all")) {
-      const filtered = values.filter((v) => v !== "all");
-      form.setFieldValue("factory", filtered.length > 0 ? filtered : ["all"]);
-    } else if (values.includes("all") && previousValues.includes("all")) {
-      const newValues = values.filter((v) => v !== "all");
-      form.setFieldValue("factory", newValues.length > 0 ? newValues : ["all"]);
-    } else if (values.length === 0) {
-      form.setFieldValue("factory", ["all"]);
-    } else {
-      form.setFieldValue("factory", values);
-    }
-  };
-
-  const handleDepartmentChange = (values: string[]) => {
-    const previousValues = form.getFieldValue("department") || [];
-
-    if (values.includes("all") && !previousValues.includes("all")) {
-      form.setFieldValue("department", [
-        "all",
-        ...departmentOptions.map((d) => d.value),
-      ]);
-    } else if (!values.includes("all") && previousValues.includes("all")) {
-      const filtered = values.filter((v) => v !== "all");
-      form.setFieldValue(
-        "department",
-        filtered.length > 0 ? filtered : ["all"],
-      );
-    } else if (values.includes("all") && previousValues.includes("all")) {
-      const newValues = values.filter((v) => v !== "all");
-      form.setFieldValue(
-        "department",
-        newValues.length > 0 ? newValues : ["all"],
-      );
-    } else if (values.length === 0) {
-      form.setFieldValue("department", ["all"]);
-    } else {
-      form.setFieldValue("department", values);
-    }
-  };
-
-  const handleSearch = (values: any) => {
-    const factory =
-      !values.factory || values.factory.includes("all")
-        ? "all"
-        : values.factory.filter((f: string) => f !== "all");
-
-    const department =
-      !values.department || values.department.includes("all")
-        ? "all"
-        : values.department.filter((d: string) => d !== "all");
-
-    setViewMonth(draftMonth);
-    setSelectedDate(draftMonth.startOf("month"));
-
-    setSearchParams({
-      business_group: values.business_group,
-      factory,
-      department,
-      name: values.name,
-      date: draftMonth.format("YYYY-MM"),
-    });
-
-    setTimeout(() => {
-      setFilterOpen(false);
-    }, 600);
-  };
 
   const daysInMonth = Array.from({ length: viewMonth.daysInMonth() }, (_, i) =>
     viewMonth.startOf("month").add(i, "day"),
@@ -463,24 +213,11 @@ const MobileCalendar: React.FC = () => {
         <span className="font-bold">{viewMonth.format("MMMM, YYYY")}</span>
 
         <div className="flex items-center gap-2">
-          <Button type="primary" onClick={goToToday} className="bg-[#1e64ee]">
-            今天
-          </Button>
-
-          <button
-            onClick={goToPreviousMonth}
-            className="w-10 h-10 hover:bg-gray-100 transition-all rounded-lg flex items-center justify-center"
-            aria-label="Previous month"
-          >
-            <LeftOutlined />
-          </button>
-          <button
-            onClick={goToNextMonth}
-            className="w-10 h-10 hover:bg-gray-100 transition-all rounded-lg flex items-center justify-center"
-            aria-label="Next month"
-          >
-            <RightOutlined />
-          </button>
+          <CalendarNavigation
+            goToToday={goToToday}
+            goToPreviousMonth={goToPreviousMonth}
+            goToNextMonth={goToNextMonth}
+          />
         </div>
       </div>
 
@@ -586,31 +323,51 @@ const MobileCalendar: React.FC = () => {
         <Form
           form={form}
           layout="vertical"
-          onFinish={handleSearch}
-          initialValues={{
-            business_group: "",
-            factory: ["all"],
-            department: ["all"],
+          onFinish={(values) => {
+            handleSearch(values, draftMonth);
+
+            setViewMonth(draftMonth);
+            setSelectedDate(draftMonth.startOf("month"));
+
+            setTimeout(() => {
+              setFilterOpen(false);
+            }, 600);
+
+            setTimeout(() => {
+              const firstDayKey = draftMonth
+                .startOf("month")
+                .format("YYYY-MM-DD");
+              const el = dayRefs.current[firstDayKey];
+
+              el?.scrollIntoView({
+                behavior: "smooth",
+                inline: "center",
+                block: "nearest",
+              });
+            }, 800);
           }}
         >
           {/* Business Group */}
           <Form.Item label="事業群" name="business_group">
-            <Select
-              options={businessGroupOptions}
-              allowClear
-              placeholder="選擇事業群"
-            />
+            <Select options={businessGroupOptions} placeholder="選擇事業群" />
           </Form.Item>
 
           {/* Factory */}
           <Form.Item label="廠別" name="factory">
             <Select
               mode="multiple"
-              options={factorySelectOptions}
+              options={factoryOptions}
               placeholder="選擇廠別"
               allowClear
-              onChange={handleFactoryChange}
-              tagRender={customTagRender}
+              onChange={(values) =>
+                handleMultiChange("factory", values, factoryOptions)
+              }
+              tagRender={(props) => (
+                <SelectTag
+                  {...props}
+                  selectedCount={selectedFactories?.length}
+                />
+              )}
             />
           </Form.Item>
 
@@ -618,11 +375,18 @@ const MobileCalendar: React.FC = () => {
           <Form.Item label="部門" name="department">
             <Select
               mode="multiple"
-              options={departmentSelectOptions}
+              options={departmentOptions}
               placeholder="選擇部門"
               allowClear
-              onChange={handleDepartmentChange}
-              tagRender={customTagRender}
+              onChange={(values) =>
+                handleMultiChange("department", values, factoryOptions)
+              }
+              tagRender={(props) => (
+                <SelectTag
+                  {...props}
+                  selectedCount={selectedDepartments?.length}
+                />
+              )}
             />
           </Form.Item>
 
