@@ -44,6 +44,7 @@ const MobileCalendar: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [filterOpen, setFilterOpen] = useState(false);
+  const [autoSelectAfterSearch, setAutoSelectAfterSearch] = useState(true);
 
   const {
     businessGroupOptions,
@@ -103,7 +104,53 @@ const MobileCalendar: React.FC = () => {
 
         const data = await leaveAPI.getLeavesHistory(searchParams);
 
-        setEvents(data.map((item, index) => mapLeaveToEvent(item, index)));
+        const mappedEvents = data.map((item, index) =>
+          mapLeaveToEvent(item, index),
+        );
+
+        setEvents(mappedEvents);
+
+        if (mappedEvents.length && autoSelectAfterSearch) {
+          const startMonth = viewMonth.startOf("month");
+          const endMonth = viewMonth.endOf("month");
+
+          const eventsInMonth = mappedEvents
+            .map((e) => ({
+              ...e,
+              start: dayjs(e.startDate),
+              end: dayjs(e.endDate),
+            }))
+            .filter(
+              (e) =>
+                e.start.isBetween(startMonth, endMonth, null, "[]") ||
+                e.end.isBetween(startMonth, endMonth, null, "[]") ||
+                (e.start.isBefore(startMonth) && e.end.isAfter(endMonth)),
+            )
+            .sort((a, b) => a.start.valueOf() - b.start.valueOf());
+
+          if (eventsInMonth.length) {
+            const firstEvent = eventsInMonth[0];
+
+            const firstEventDay = firstEvent.start.isBefore(startMonth)
+              ? startMonth
+              : firstEvent.start.startOf("day");
+
+            setSelectedDate(firstEventDay);
+
+            setTimeout(() => {
+              const key = firstEventDay.format("YYYY-MM-DD");
+              const el = dayRefs.current[key];
+
+              el?.scrollIntoView({
+                behavior: "smooth",
+                inline: "center",
+                block: "nearest",
+              });
+            }, 100);
+          }
+
+          setAutoSelectAfterSearch(false);
+        }
       } catch (err) {
         notify("error", "Error", "Load leave history failed", 1.5);
         setEvents([]);
@@ -133,7 +180,7 @@ const MobileCalendar: React.FC = () => {
     setSelectedDate(currentMonth);
 
     setTimeout(() => {
-      const todayKey = dayjs().format("YYYY-MM-DD");
+      const todayKey = currentMonth.format("YYYY-MM-DD");
       const el = dayRefs.current[todayKey];
 
       el?.scrollIntoView({
@@ -337,27 +384,14 @@ const MobileCalendar: React.FC = () => {
           form={form}
           layout="vertical"
           onFinish={(values) => {
+            setAutoSelectAfterSearch(true);
             handleSearch(values, draftMonth);
 
             setViewMonth(draftMonth);
-            setSelectedDate(draftMonth.startOf("month"));
 
             setTimeout(() => {
               setFilterOpen(false);
             }, 600);
-
-            setTimeout(() => {
-              const firstDayKey = draftMonth
-                .startOf("month")
-                .format("YYYY-MM-DD");
-              const el = dayRefs.current[firstDayKey];
-
-              el?.scrollIntoView({
-                behavior: "smooth",
-                inline: "center",
-                block: "nearest",
-              });
-            }, 800);
           }}
         >
           {/* Business Group */}
