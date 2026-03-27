@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getIPApi } from "../services/getIPAddress.api";
 
-const FIXED_IP = "192.168.12.197";
+const FIXED_IP = ["192.168.12.197"];
 
 const CUSTOM_IPS: string[] = ["192.168.18.138", "192.168.18.2"];
 
@@ -18,7 +18,7 @@ export const useIPGuard = () => {
         const ip = (await res.text()).trim();
         setClientIP(ip);
 
-        if (ip === FIXED_IP) {
+        if (FIXED_IP.includes(ip)) {
           setMode("fixed");
         } else if (CUSTOM_IPS.includes(ip)) {
           setMode("custom");

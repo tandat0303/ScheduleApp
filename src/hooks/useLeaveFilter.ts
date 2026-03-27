@@ -173,16 +173,11 @@ import { departmentAPI } from "../services/department.api";
 import { notify } from "../components/ui/Notification";
 import { resolveFactoryIds } from "../lib/helpers";
 
-// ============================================================
-// Giá trị cố định cho IP 192.168.12.197
-// ============================================================
 export const FIXED_DEFAULTS = {
   business_group: "1",
   factory: ["LYV"] as string[],
   department: ["207"] as string[],
-  name: "15414",
 };
-// ============================================================
 
 export const useLeaveFilter = (form: FormInstance, isFixed = false) => {
   const [businessGroupOptions, setBusinessGroupOptions] = useState<
@@ -214,14 +209,14 @@ export const useLeaveFilter = (form: FormInstance, isFixed = false) => {
             business_group: FIXED_DEFAULTS.business_group,
             factory: FIXED_DEFAULTS.factory,
             department: FIXED_DEFAULTS.department,
-            name: FIXED_DEFAULTS.name,
+            name: "",
           });
 
           setSearchParams({
             business_group: FIXED_DEFAULTS.business_group,
             factory: FIXED_DEFAULTS.factory,
             department: FIXED_DEFAULTS.department,
-            name: FIXED_DEFAULTS.name,
+            name: "",
             date: dayjs().format("YYYY-MM"),
           });
         } else if (data?.length) {
@@ -249,7 +244,6 @@ export const useLeaveFilter = (form: FormInstance, isFixed = false) => {
     loadBusiness();
   }, [isFixed]);
 
-  // Load factories — set form value SAU KHI options đã load xong để label hiển thị đúng
   useEffect(() => {
     if (!selectedBusinessGroup) return;
 
@@ -260,7 +254,6 @@ export const useLeaveFilter = (form: FormInstance, isFixed = false) => {
         setFactoryOptions(options);
 
         if (isFixed) {
-          // options đã sẵn sàng → Ant Design Select sẽ resolve đúng label
           form.setFieldValue("factory", FIXED_DEFAULTS.factory);
         } else if (!selectedFactories?.length) {
           form.setFieldValue("factory", ["all"]);
@@ -274,7 +267,6 @@ export const useLeaveFilter = (form: FormInstance, isFixed = false) => {
     loadFactories();
   }, [selectedBusinessGroup]);
 
-  // Load departments — set form value SAU KHI options đã load xong để label hiển thị đúng
   useEffect(() => {
     if (!selectedFactories || !factoryOptions.length) return;
 
@@ -286,7 +278,6 @@ export const useLeaveFilter = (form: FormInstance, isFixed = false) => {
         setDepartmentOptions(options);
 
         if (isFixed) {
-          // options đã sẵn sàng → Ant Design Select sẽ resolve đúng label
           form.setFieldValue("department", FIXED_DEFAULTS.department);
         } else if (!form.getFieldValue("department")?.length) {
           form.setFieldValue("department", ["all"]);
@@ -339,7 +330,7 @@ export const useLeaveFilter = (form: FormInstance, isFixed = false) => {
           business_group: FIXED_DEFAULTS.business_group,
           factory: FIXED_DEFAULTS.factory,
           department: FIXED_DEFAULTS.department,
-          name: FIXED_DEFAULTS.name,
+          name: values.name || "",
           date: draftMonth.format("YYYY-MM"),
         });
         return;
