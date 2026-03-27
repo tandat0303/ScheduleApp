@@ -124,6 +124,7 @@ export const mapLeaveToEvent = (
     title: item.EmployeeNameChinese,
     facName: item.FactoryName,
     deptName: item.DeptName,
+    empId: item.EmpID,
     leaveSummary: leaveSummary,
     startDate: item.StartDate,
     endDate: item.EndDate,

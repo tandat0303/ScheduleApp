@@ -12,7 +12,9 @@ import {
   Form,
   Popover,
   FloatButton,
+  Tooltip,
 } from "antd";
+import { LockOutlined } from "@ant-design/icons";
 import zhTW from "antd/locale/zh_TW";
 import type { CalendarEvent } from "../types";
 import { mapLeaveToEvent } from "../lib/helpers";
@@ -40,7 +42,12 @@ import { notify } from "./ui/Notification";
 dayjs.extend(isoWeek);
 dayjs.locale("zh-tw");
 
-const CalendarApp: React.FC = () => {
+interface CalendarAppProps {
+  /** Khi true: form bị khoá, dùng giá trị cố định từ FIXED_DEFAULTS */
+  isFixed?: boolean;
+}
+
+const CalendarApp: React.FC<CalendarAppProps> = ({ isFixed = false }) => {
   const calendarRef = useRef<HTMLDivElement>(null);
   const [isVisibilityScroll, setIsVisibilityScroll] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
@@ -65,7 +72,7 @@ const CalendarApp: React.FC = () => {
     setSearchParams,
     handleMultiChange,
     handleSearch,
-  } = useLeaveFilter(form);
+  } = useLeaveFilter(form, isFixed);
 
   const selectedFactories = Form.useWatch("factory", form) || [];
   const selectedDepartments = Form.useWatch("department", form) || [];
@@ -206,6 +213,13 @@ const CalendarApp: React.FC = () => {
     };
   }, []);
 
+  // Icon khoá hiển thị khi isFixed
+  const lockIcon = isFixed ? (
+    <Tooltip title="Giá trị được cố định cho thiết bị này">
+      <LockOutlined className="text-gray-400 ml-1" />
+    </Tooltip>
+  ) : null;
+
   return (
     <div className="relative h-screen overflow-hidden">
       {/* Loading */}
@@ -265,14 +279,13 @@ const CalendarApp: React.FC = () => {
                     business_group: "",
                     factory: ["all"],
                     department: ["all"],
-                    // leaveDate: dayjs(now).format("MMMM YYYY")
                   }}
                 >
                   <div className="flex flex-col lg:flex-row lg:items-end gap-2">
                     <Space size={8} align="end" wrap>
-                      {/* Business */}
+                      {/* Business Group */}
                       <Form.Item
-                        label="事業群"
+                        label={<span>事業群 {lockIcon}</span>}
                         name="business_group"
                         className="mb-0"
                       >
@@ -280,16 +293,22 @@ const CalendarApp: React.FC = () => {
                           options={businessGroupOptions}
                           maxTagCount={2}
                           style={{ width: 160 }}
+                          disabled={isFixed}
                         />
                       </Form.Item>
 
                       {/* Factory */}
-                      <Form.Item label="廠別" name="factory" className="mb-0">
+                      <Form.Item
+                        label={<span>廠別 {lockIcon}</span>}
+                        name="factory"
+                        className="mb-0"
+                      >
                         <Select
                           mode="multiple"
                           options={factoryOptions}
                           maxTagCount={2}
                           style={{ width: 160 }}
+                          disabled={isFixed}
                           tagRender={(props) => {
                             if (props.value === "all") return <></>;
                             return (
@@ -303,7 +322,7 @@ const CalendarApp: React.FC = () => {
                               />
                             );
                           }}
-                          allowClear
+                          allowClear={!isFixed}
                           onChange={(values) =>
                             handleMultiChange("factory", values, factoryOptions)
                           }
@@ -312,7 +331,7 @@ const CalendarApp: React.FC = () => {
 
                       {/* Department */}
                       <Form.Item
-                        label="部門"
+                        label={<span>部門 {lockIcon}</span>}
                         name="department"
                         className="mb-0"
                       >
@@ -321,6 +340,7 @@ const CalendarApp: React.FC = () => {
                           options={departmentOptions}
                           maxTagCount={2}
                           style={{ width: 180 }}
+                          disabled={isFixed}
                           onChange={(values) =>
                             handleMultiChange(
                               "department",
@@ -328,7 +348,6 @@ const CalendarApp: React.FC = () => {
                               departmentOptions,
                             )
                           }
-                          // loading={departmentOptions.length === 0}
                           tagRender={(props) => {
                             if (props.value === "all") return <></>;
                             return (
@@ -342,7 +361,7 @@ const CalendarApp: React.FC = () => {
                               />
                             );
                           }}
-                          allowClear
+                          allowClear={!isFixed}
                         />
                       </Form.Item>
 
@@ -381,15 +400,15 @@ const CalendarApp: React.FC = () => {
                   </div>
                 </Form>
               </div>
+            </div>
 
-              {/* Navigation Bar */}
-              <div className="flex justify-end gap-4 items-end">
-                <CalendarNavigation
-                  goToToday={goToToday}
-                  goToPreviousMonth={goToPreviousMonth}
-                  goToNextMonth={goToNextMonth}
-                />
-              </div>
+            {/* Navigation Bar */}
+            <div className="flex justify-end gap-4 items-end">
+              <CalendarNavigation
+                goToToday={goToToday}
+                goToPreviousMonth={goToPreviousMonth}
+                goToNextMonth={goToNextMonth}
+              />
             </div>
 
             {/* Calendar Grid - Scrollable */}
@@ -510,7 +529,8 @@ const CalendarApp: React.FC = () => {
                                   />
                                   <div className="px-2 py-0.5 overflow-hidden">
                                     <div className="text-xs font-semibold text-gray-800 leading-snug line-clamp-2">
-                                      {bar.event.facName} - {bar.event.title} (
+                                      {bar.event.facName} - {bar.event.empId} -
+                                      {bar.event.title} (
                                       {bar.event.leaveSummary})
                                     </div>
 
@@ -537,7 +557,7 @@ const CalendarApp: React.FC = () => {
 
         {/* Mobile View */}
         <div className="block md:hidden h-full overflow-hidden">
-          <MobileCalendar />
+          <MobileCalendar isFixed={isFixed} />
         </div>
       </div>
 

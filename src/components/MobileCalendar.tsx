@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import dayjs, { Dayjs } from "dayjs";
 import isBetween from "dayjs/plugin/isBetween";
 import "dayjs/locale/zh-tw";
-import { DatePicker, Drawer, Form, Select, Input, Button } from "antd";
-import { MoonFilled, SunFilled } from "@ant-design/icons";
+import { DatePicker, Drawer, Form, Select, Input, Button, Tooltip } from "antd";
+import { MoonFilled, SunFilled, LockOutlined } from "@ant-design/icons";
 import zhTW from "antd/locale/zh_TW";
 import { SlidersHorizontal } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -25,7 +25,11 @@ import { useLeaveFilter } from "../hooks/useLeaveFilter";
 dayjs.extend(isBetween);
 dayjs.locale("zh-tw");
 
-const MobileCalendar: React.FC = () => {
+interface MobileCalendarProps {
+  isFixed?: boolean;
+}
+
+const MobileCalendar: React.FC<MobileCalendarProps> = ({ isFixed = false }) => {
   const [form] = Form.useForm();
 
   const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
@@ -54,7 +58,7 @@ const MobileCalendar: React.FC = () => {
     setSearchParams,
     handleMultiChange,
     handleSearch,
-  } = useLeaveFilter(form);
+  } = useLeaveFilter(form, isFixed);
 
   const selectedFactories = Form.useWatch("factory", form) || [];
   const selectedDepartments = Form.useWatch("department", form) || [];
@@ -258,13 +262,25 @@ const MobileCalendar: React.FC = () => {
         </div>
 
         <div className="flex gap-2">
-          <button
-            onClick={() => setFilterOpen(true)}
-            className="w-10 h-10 bg-white rounded-full shadow flex items-center justify-center"
-            aria-label="Open filters"
-          >
-            <SlidersHorizontal size={18} />
-          </button>
+          {/* Chỉ hiện nút filter nếu không phải isFixed */}
+          {!isFixed && (
+            <button
+              onClick={() => setFilterOpen(true)}
+              className="w-10 h-10 bg-white rounded-full shadow flex items-center justify-center"
+              aria-label="Open filters"
+            >
+              <SlidersHorizontal size={18} />
+            </button>
+          )}
+
+          {/* Hiện icon khoá thay thế nút filter khi isFixed */}
+          {isFixed && (
+            <Tooltip title="Bộ lọc được cố định cho thiết bị này">
+              <div className="w-10 h-10 bg-white rounded-full shadow flex items-center justify-center text-gray-400">
+                <LockOutlined />
+              </div>
+            </Tooltip>
+          )}
         </div>
       </div>
 
@@ -360,7 +376,8 @@ const MobileCalendar: React.FC = () => {
                     transition={{ delay: i * 0.05 }}
                   >
                     <div className="font-semibold">
-                      {event.facName} - {event.title} ({event.leaveSummary})
+                      {event.facName} - {event.empId} - {event.title} (
+                      {event.leaveSummary})
                     </div>
                   </motion.button>
                 ))}
@@ -372,104 +389,106 @@ const MobileCalendar: React.FC = () => {
         </div>
       </div>
 
-      {/* FILTER DRAWER */}
-      <Drawer
-        open={filterOpen}
-        onClose={() => setFilterOpen(false)}
-        placement="bottom"
-        size="auto"
-        title="篩選資料"
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={(values) => {
-            setAutoSelectAfterSearch(true);
-            handleSearch(values, draftMonth);
-
-            setViewMonth(draftMonth);
-
-            setTimeout(() => {
-              setFilterOpen(false);
-            }, 600);
-          }}
+      {/* FILTER DRAWER — chỉ hiện khi không phải isFixed */}
+      {!isFixed && (
+        <Drawer
+          open={filterOpen}
+          onClose={() => setFilterOpen(false)}
+          placement="bottom"
+          size="auto"
+          title="篩選資料"
         >
-          {/* Business Group */}
-          <Form.Item label="事業群" name="business_group">
-            <Select options={businessGroupOptions} placeholder="選擇事業群" />
-          </Form.Item>
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={(values) => {
+              setAutoSelectAfterSearch(true);
+              handleSearch(values, draftMonth);
 
-          {/* Factory */}
-          <Form.Item label="廠別" name="factory">
-            <Select
-              mode="multiple"
-              options={factoryOptions}
-              placeholder="選擇廠別"
-              allowClear
-              onChange={(values) =>
-                handleMultiChange("factory", values, factoryOptions)
-              }
-              tagRender={(props) => (
-                <SelectTag
-                  {...props}
-                  selectedCount={selectedFactories?.length}
-                />
-              )}
-            />
-          </Form.Item>
+              setViewMonth(draftMonth);
 
-          {/* Department */}
-          <Form.Item label="部門" name="department">
-            <Select
-              mode="multiple"
-              options={departmentOptions}
-              placeholder="選擇部門"
-              allowClear
-              onChange={(values) =>
-                handleMultiChange("department", values, factoryOptions)
-              }
-              tagRender={(props) => (
-                <SelectTag
-                  {...props}
-                  selectedCount={selectedDepartments?.length}
-                />
-              )}
-            />
-          </Form.Item>
-
-          {/* Name */}
-          <Form.Item label="姓名" name="name">
-            <Input placeholder="輸入姓名" allowClear />
-          </Form.Item>
-
-          {/* Leave Date - Month Picker */}
-          <Form.Item label="休假日期">
-            <DatePicker
-              picker="month"
-              locale={zhTW.DatePicker}
-              value={draftMonth}
-              onChange={(date) => {
-                if (!date) return;
-                setDraftMonth(date);
-              }}
-              allowClear
-              format="MMMM YYYY"
-              placeholder="選擇月份"
-              className="w-full"
-            />
-          </Form.Item>
-
-          {/* Submit Button */}
-          <Button
-            htmlType="submit"
-            type="primary"
-            block
-            className="bg-[#1e64ee]"
+              setTimeout(() => {
+                setFilterOpen(false);
+              }, 600);
+            }}
           >
-            查詢
-          </Button>
-        </Form>
-      </Drawer>
+            {/* Business Group */}
+            <Form.Item label="事業群" name="business_group">
+              <Select options={businessGroupOptions} placeholder="選擇事業群" />
+            </Form.Item>
+
+            {/* Factory */}
+            <Form.Item label="廠別" name="factory">
+              <Select
+                mode="multiple"
+                options={factoryOptions}
+                placeholder="選擇廠別"
+                allowClear
+                onChange={(values) =>
+                  handleMultiChange("factory", values, factoryOptions)
+                }
+                tagRender={(props) => (
+                  <SelectTag
+                    {...props}
+                    selectedCount={selectedFactories?.length}
+                  />
+                )}
+              />
+            </Form.Item>
+
+            {/* Department */}
+            <Form.Item label="部門" name="department">
+              <Select
+                mode="multiple"
+                options={departmentOptions}
+                placeholder="選擇部門"
+                allowClear
+                onChange={(values) =>
+                  handleMultiChange("department", values, factoryOptions)
+                }
+                tagRender={(props) => (
+                  <SelectTag
+                    {...props}
+                    selectedCount={selectedDepartments?.length}
+                  />
+                )}
+              />
+            </Form.Item>
+
+            {/* Name */}
+            <Form.Item label="姓名" name="name">
+              <Input placeholder="輸入姓名" allowClear />
+            </Form.Item>
+
+            {/* Leave Date - Month Picker */}
+            <Form.Item label="休假日期">
+              <DatePicker
+                picker="month"
+                locale={zhTW.DatePicker}
+                value={draftMonth}
+                onChange={(date) => {
+                  if (!date) return;
+                  setDraftMonth(date);
+                }}
+                allowClear
+                format="MMMM YYYY"
+                placeholder="選擇月份"
+                className="w-full"
+              />
+            </Form.Item>
+
+            {/* Submit Button */}
+            <Button
+              htmlType="submit"
+              type="primary"
+              block
+              className="bg-[#1e64ee]"
+            >
+              查詢
+            </Button>
+          </Form>
+        </Drawer>
+      )}
 
       {/* EVENT MODAL */}
       <EventDetailModal

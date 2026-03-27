@@ -6,6 +6,7 @@ export interface CalendarEvent {
   title: string;
   facName: string;
   deptName: string;
+  empId: string;
   leaveSummary: string;
   startDate: string;
   endDate: string;
